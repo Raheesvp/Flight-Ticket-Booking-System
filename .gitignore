@@ -1,0 +1,48 @@
+# Build results
+bin/
+obj/
+
+# Visual Studio cache/options directories
+.vs/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+*.sln.iml
+
+# ASP.NET/Entity Framework
+*.dbmdl
+*.dbproj.user
+
+# Visual Studio Code
+.vscode/
+
+# Avoid committing package manager directories
+node_modules/
+
+# Log files
+*.log
+
+# publish output
+publish/
+
+# NuGet
+*.nupkg
+*.snupkg
+# Uncomment if you have packages folder
+# packages/
+
+# local secrets
+appsettings.Development.json
+
+# Rider
+*.sln.iml
+
+# OS generated files
+.DS_Store
+Thumbs.db
