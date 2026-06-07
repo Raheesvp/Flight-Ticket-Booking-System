@@ -1,32 +1,23 @@
-using System.Diagnostics;
-using FlightBooking.Models;
+using FlightBooking.Data;
+using FlightBooking.Web.Data;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FlightBooking.Controllers
+namespace FlightBooking.Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(IUnitOfWork unitOfWork)
         {
-            _logger = logger;
+            _unitOfWork = unitOfWork;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
-        }
-
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            // Read all airports from DB via repo
+            var airports = await _unitOfWork.Airports.GetAllAsync();
+            return View(airports);
         }
     }
 }
