@@ -1,8 +1,29 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model IEnumerable<FlightBooking.Models.Domain.Airport>
+
+@{
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<h2>Airports loaded from database</h2>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>IATA</th>
+            <th>Airport Name</th>
+            <th>City</th>
+            <th>Country</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var airport in Model)
+        {
+            <tr>
+                <td>@airport.IATACode</td>
+                <td>@airport.AirportName</td>
+                <td>@airport.City</td>
+                <td>@airport.Country</td>
+            </tr>
+        }
+    </tbody>
+</table>
