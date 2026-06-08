@@ -1,22 +1,121 @@
-html {
-  font-size: 14px;
+.fb-navbar {
+    background-color: #003580;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
+    .fb-navbar .nav-link {
+        color: rgba(255,255,255,0.85) !important;
+    }
+
+        .fb-navbar .nav-link.active,
+        .fb-navbar .nav-link:hover {
+            color: #fff !important;
+        }
+
+    .fb-navbar .navbar-brand {
+        color: #fff !important;
+        font-size: 1.25rem;
+    }
+
+/* Hero section */
+.fb-hero {
+    background: linear-gradient(135deg, #003580 0%, #0066cc 100%);
+    padding: 60px 0 80px;
+    color: #fff;
 }
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    .fb-hero h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .fb-hero p {
+        opacity: 0.85;
+        margin-bottom: 32px;
+    }
+
+/* Search card */
+.fb-search-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
 }
 
-html {
-  position: relative;
-  min-height: 100%;
+    .fb-search-card label {
+        font-weight: 500;
+        font-size: 13px;
+        color: #444;
+    }
+
+    .fb-search-card .form-control,
+    .fb-search-card .form-select {
+        border-radius: 8px;
+        font-size: 14px;
+        height: 44px;
+    }
+
+    .fb-search-card .btn-search {
+        background: #ff6600;
+        border: none;
+        color: #fff;
+        height: 44px;
+        font-weight: 600;
+        border-radius: 8px;
+        width: 100%;
+    }
+
+        .fb-search-card .btn-search:hover {
+            background: #e55b00;
+        }
+
+/* Trip type tabs */
+.trip-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
 }
 
+.trip-tab {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1.5px solid #003580;
+    font-size: 13px;
+    cursor: pointer;
+    background: transparent;
+    color: #003580;
+}
+
+    .trip-tab.active {
+        background: #003580;
+        color: #fff;
+    }
+
+/* Footer */
+.fb-footer {
+    background: #1a1a2e;
+    color: #ccc;
+}
+
+    .fb-footer a {
+        color: #aaa;
+        text-decoration: none;
+    }
+
+        .fb-footer a:hover {
+            color: #fff;
+        }
+
+    .fb-footer h6 {
+        color: #fff;
+    }
+
+/* General */
 body {
-  margin-bottom: 60px;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+main {
+    min-height: calc(100vh - 200px);
 }

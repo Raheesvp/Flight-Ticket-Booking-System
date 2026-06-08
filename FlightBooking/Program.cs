@@ -42,6 +42,9 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// ADD THIS — redirects 404 to your NotFound view
+app.UseStatusCodePagesWithReExecute("/Home/NotFound404");
+
 app.UseSession();
 app.UseAuthorization();
 

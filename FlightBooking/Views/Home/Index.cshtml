@@ -27,3 +27,102 @@
         }
     </tbody>
 </table>
+
+@{
+    ViewData["Title"] = "Book Flights";
+}
+
+<div class="fb-hero">
+    <div class="container">
+        <h1><i class="bi bi-airplane me-2"></i>Book Your Flight</h1>
+        <p>Fly anywhere across India and the Gulf — best fares guaranteed.</p>
+
+        <div class="fb-search-card">
+
+            <!-- Trip type tabs -->
+            <div class="trip-tabs">
+                <button class="trip-tab active" onclick="setTrip(this,'O')">One Way</button>
+                <button class="trip-tab" onclick="setTrip(this,'R')">Round Trip</button>
+                <button class="trip-tab" onclick="setTrip(this,'M')">Multi City</button>
+            </div>
+
+            <form asp-controller="Flight" asp-action="Search" method="get">
+                <input type="hidden" name="tripType" id="tripType" value="O" />
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label>From</label>
+                        <select name="fromAirportId" class="form-select" required>
+                            <option value="">— Select —</option>
+                            @foreach (var a in (SelectList)ViewBag.Airports)
+                            {
+                                <option value="@a.Value">@a.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>To</label>
+                        <select name="toAirportId" class="form-select" required>
+                            <option value="">— Select —</option>
+                            @foreach (var a in (SelectList)ViewBag.Airports)
+                            {
+                                <option value="@a.Value">@a.Text</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>Departure</label>
+                        <input type="date" name="departureDate"
+                               class="form-control"
+                               min="@DateTime.Now.ToString("yyyy-MM-dd")"
+                               required />
+                    </div>
+
+                    <div class="col-md-2" id="returnDateDiv" style="display:none">
+                        <label>Return</label>
+                        <input type="date" name="returnDate" class="form-control" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label>Passengers</label>
+                        <select name="passengers" class="form-select">
+                            @for (int i = 1; i <= 9; i++)
+                            {
+                                <option value="@i">@i Adult@(i > 1 ? "s" : "")</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <label>Class</label>
+                        <select name="journeyClass" class="form-select">
+                            <option value="Economy">Economy</option>
+                            <option value="Business">Business</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1">
+                        <button type="submit" class="btn-search">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function setTrip(btn, type) {
+          document.querySelectorAll('.trip-tab')
+                  .forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('tripType').value = type;
+          document.getElementById('returnDateDiv').style.display =
+            type === 'R' ? 'block' : 'none';
+        }
+    </script>
+}
