@@ -29,7 +29,7 @@ namespace FlightBooking.Web.Data
                 {
                     UserName       = adminEmail,
                     Email          = adminEmail,
-                    Name           = "Site Admin",
+                    FullName           = "Site Admin",
                     EmailConfirmed = true,
                     IsActive       = true
                 };
