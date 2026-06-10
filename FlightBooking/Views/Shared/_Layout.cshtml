@@ -1,4 +1,4 @@
-﻿@{
+@{
     var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
     var action = ViewContext.RouteData.Values["action"]?.ToString();
 }
@@ -203,6 +203,31 @@
                 font-size: 1.3rem;
             }
         }
+
+        /* Custom Dropdown Styling */
+        .dropdown-menu-custom {
+            background-color: #0A192F !important;
+            border: 1px solid #1E3A5F !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+            padding: 0.5rem !important;
+            margin-top: 10px !important;
+        }
+        .dropdown-item-custom {
+            color: #CBD5E1 !important;
+            border-radius: 8px !important;
+            padding: 0.6rem 1.2rem !important;
+            font-size: 0.9rem !important;
+            transition: all 0.25s ease !important;
+        }
+        .dropdown-item-custom:hover {
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            color: #F59E0B !important;
+        }
+        .dropdown-divider-custom {
+            border-top: 1px solid #1E3A5F !important;
+            margin: 0.5rem 0 !important;
+        }
     </style>
 </head>
 <body>
@@ -229,21 +254,60 @@
                                 <i class="fas fa-search me-1"></i> Search Flights
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" asp-controller="Booking" asp-action="MyBookings">
-                                <i class="fas fa-ticket-alt me-1"></i> My Bookings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" asp-controller="Account" asp-action="Profile">
-                                <i class="fas fa-user-circle me-1"></i> Profile
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link login-btn" asp-controller="Account" asp-action="Login">
-                                <i class="fas fa-key me-1"></i> LOGIN
-                            </a>
-                        </li>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link nav-link-custom" asp-controller="Booking" asp-action="MyBookings">
+                                    <i class="fas fa-ticket-alt me-1"></i> My Bookings
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link nav-link-custom" asp-controller="Account" asp-action="Profile">
+                                    <i class="fas fa-user-circle me-1"></i> Profile
+                                </a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle nav-link-custom" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-alt me-1 text-warning"></i> @User.Identity.Name
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom">
+                                    <li>
+                                        <a class="dropdown-item dropdown-item-custom" asp-controller="Booking" asp-action="MyBookings">
+                                            <i class="fas fa-ticket-alt me-2"></i> My Bookings
+                                        </a>
+                                    </li>
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <li>
+                                            <a class="dropdown-item dropdown-item-custom" asp-controller="Admin" asp-action="Index">
+                                                <i class="fas fa-tachometer-alt me-2"></i> Admin Panel
+                                            </a>
+                                        </li>
+                                    }
+                                    <li><hr class="dropdown-divider dropdown-divider-custom" /></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                            <button type="submit" class="dropdown-item dropdown-item-custom text-danger">
+                                                <i class="fas fa-sign-out-alt me-2 text-danger"></i> Logout
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link nav-link-custom" asp-controller="Account" asp-action="Register">
+                                    Register
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link login-btn" asp-controller="Account" asp-action="Login">
+                                    <i class="fas fa-key me-1"></i> LOGIN
+                                </a>
+                            </li>
+                        }
                     </ul>
                 </div>
             </div>
@@ -344,5 +408,6 @@
             // Native bootstrap handles this, just ensures dynamic content works.
         });
     </script>
+
 </body>
 </html>

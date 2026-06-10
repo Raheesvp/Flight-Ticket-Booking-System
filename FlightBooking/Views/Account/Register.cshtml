@@ -1,10 +1,109 @@
-﻿@{
-    ViewData["Title"] = "Register";
-}
+﻿@model FlightBooking.Web.Models.ViewModels.RegisterViewModel
+@{ ViewData["Title"] = "Create account"; }
 
-<div class="container py-5 text-center">
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
 
-    <h2>Create Account</h2>
-    <p class="text-muted">Full Form coming on the day 6</p>
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
 
+          <div class="text-center mb-4">
+            <i class="bi bi-person-plus"
+               style="font-size:2.5rem;color:#003580"></i>
+            <h4 class="mt-2 fw-bold">Create account</h4>
+            <p class="text-muted small">
+              Join FlightBooking today
+            </p>
+          </div>
+
+          <form asp-action="Register" method="post">
+
+            <div asp-validation-summary="All"
+                 class="alert alert-danger py-2 small"
+                 style="display:none">
+            </div>
+
+            <div class="mb-3">
+              <label asp-for="FullName"
+                     class="form-label"></label>
+              <input asp-for="FullName"
+                     class="form-control"
+                     placeholder="Mohammed Rahees" />
+              <span asp-validation-for="FullName"
+                    class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+              <label asp-for="Email"
+                     class="form-label"></label>
+              <input asp-for="Email"
+                     class="form-control"
+                     placeholder="you@example.com" />
+              <span asp-validation-for="Email"
+                    class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+              <label asp-for="PhoneNumber"
+                     class="form-label"></label>
+              <input asp-for="PhoneNumber"
+                     class="form-control"
+                     placeholder="+91 9876543210" />
+              <span asp-validation-for="PhoneNumber"
+                    class="text-danger small"></span>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label asp-for="Password"
+                       class="form-label"></label>
+                <input asp-for="Password"
+                       class="form-control"
+                       placeholder="Min 8 chars" />
+                <span asp-validation-for="Password"
+                      class="text-danger small"></span>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label asp-for="ConfirmPassword"
+                       class="form-label"></label>
+                <input asp-for="ConfirmPassword"
+                       class="form-control"
+                       placeholder="Repeat password" />
+                <span asp-validation-for="ConfirmPassword"
+                      class="text-danger small"></span>
+              </div>
+            </div>
+
+            <button type="submit"
+                    class="btn btn-primary w-100 py-2"
+                    style="background:#003580;border:none">
+              <i class="bi bi-person-check me-2"></i>
+              Create account
+            </button>
+          </form>
+
+          <hr class="my-3" />
+          <p class="text-center small mb-0">
+            Already have an account?
+            <a asp-action="Login" class="fw-500">
+              Sign in
+            </a>
+          </p>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
+
+@section Scripts {
+  @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+  <script>
+    const vs = document.querySelector('[data-valmsg-summary]')
+            || document.querySelector('[data-val-summary]');
+    if (vs && vs.querySelectorAll('li').length)
+      vs.style.display = 'block';
+  </script>
+}

@@ -7,7 +7,7 @@ namespace FlightBooking.Models.Domain
         //IdentityUser Already gives you 
         //Id, Email, UserName, PhoneNumber, PasswordHash
 
-        public string Name { get; set; }
+        public string FullName { get; set; }
         public string? ProfilePhotoUrl { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public bool IsActive { get; set; } = true;

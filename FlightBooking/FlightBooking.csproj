@@ -9,7 +9,6 @@
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
     <Folder Include="Models\DTOs\" />
-    <Folder Include="Models\ViewModels\" />
     <Folder Include="Views\Flights\" />
     <Folder Include="Views\Booking\" />
     <Folder Include="Views\Admin\" />
