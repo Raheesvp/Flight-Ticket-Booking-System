@@ -1,0 +1,110 @@
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model FlightBooking.Models.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<!-- KPI cards row -->
+<div class="row g-3 mb-4">
+
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-icon"
+                 style="background:#eff6ff">
+                <i class="bi bi-ticket-perforated"
+                   style="color:#3b82f6"></i>
+            </div>
+            <p class="kpi-value">@Model.TotalBookings</p>
+            <p class="kpi-label">Total bookings</p>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-icon"
+                 style="background:#f0fdf4">
+                <i class="bi bi-cash-stack"
+                   style="color:#22c55e"></i>
+            </div>
+            <p class="kpi-value">
+                ₹@Model.TotalRevenue.ToString("N0")
+            </p>
+            <p class="kpi-label">Total revenue</p>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-icon"
+                 style="background:#fff7ed">
+                <i class="bi bi-airplane"
+                   style="color:#f97316"></i>
+            </div>
+            <p class="kpi-value">@Model.TotalFlights</p>
+            <p class="kpi-label">Total flights</p>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-icon"
+                 style="background:#fdf4ff">
+                <i class="bi bi-people"
+                   style="color:#a855f7"></i>
+            </div>
+            <p class="kpi-value">@Model.TotalUsers</p>
+            <p class="kpi-label">Registered users</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- Booking status breakdown -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="kpi-card">
+            <h6 class="fw-600 mb-3">Booking status</h6>
+            <div class="d-flex gap-3">
+                <div>
+                    <span class="badge badge-confirmed px-3 py-2">
+                        @Model.ConfirmedBookings Confirmed
+                    </span>
+                </div>
+                <div>
+                    <span class="badge badge-cancelled px-3 py-2">
+                        @Model.CancelledBookings Cancelled
+                    </span>
+                </div>
+                <div>
+                    <span class="badge badge-pending px-3 py-2">
+                        @Model.PendingBookings Pending
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="kpi-card">
+            <h6 class="fw-600 mb-3">Quick links</h6>
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-action="Flights"
+                   class="btn btn-sm btn-outline-primary">
+                    Manage flights
+                </a>
+                <a asp-action="Bookings"
+                   class="btn btn-sm btn-outline-secondary">
+                    View bookings
+                </a>
+                <a asp-action="Users"
+                   class="btn btn-sm btn-outline-secondary">
+                    Manage users
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

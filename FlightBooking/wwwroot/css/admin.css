@@ -1,0 +1,142 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+/* Admin wrapper — sidebar + main side by side */
+.admin-body {
+    background: #f4f6f9;
+    margin: 0;
+}
+
+.admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.admin-sidebar {
+    width: 230px;
+    min-width: 230px;
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.sidebar-brand {
+    padding: 20px 20px 16px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 12px 0;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 13.5px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+}
+
+    .sidebar-link:hover {
+        background: rgba(255,255,255,0.07);
+        color: #fff;
+    }
+
+    .sidebar-link.active {
+        background: rgba(255,255,255,0.12);
+        color: #fff;
+        font-weight: 500;
+        border-left: 3px solid #0066cc;
+    }
+
+.sidebar-footer {
+    padding: 12px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Main area */
+.admin-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.admin-topbar {
+    background: #fff;
+    padding: 14px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.admin-content {
+    padding: 24px;
+}
+
+/* KPI cards */
+.kpi-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+}
+
+    .kpi-card .kpi-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 26px;
+        font-weight: 600;
+        color: #111;
+        margin: 0;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 2px 0 0;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+/* Status badges */
+.badge-confirmed {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.badge-cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.badge-pending {
+    background: #fef9c3;
+    color: #854d0e;
+}
