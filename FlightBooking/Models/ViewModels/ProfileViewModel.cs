@@ -1,7 +1,7 @@
-﻿
+
 using System.ComponentModel.DataAnnotations;
 
-namespace FlightBooking.Web.Models.ViewModels
+namespace FlightBooking.Models.ViewModels
 {
 
         public class ProfileViewModel

@@ -1,0 +1,96 @@
+@model IEnumerable<Airline>
+@{
+    ViewData["Title"] = "Airlines";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible mb-3">
+        @TempData["Success"]
+        <button type="button" class="btn-close"
+                data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="d-flex justify-content-between
+            align-items-center mb-3">
+    <h5 class="mb-0">All airlines</h5>
+    <a asp-action="AirlineAdd"
+       class="btn btn-sm btn-primary"
+       style="background:#003580;border:none">
+        <i class="bi bi-plus-lg me-1"></i> Add airline
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Code</th>
+                    <th>Airline name</th>
+                    <th>Logo</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var a in Model)
+                {
+                    <tr>
+                        <td>
+                            <span class="badge bg-secondary">
+                                @a.AirlineCode
+                            </span>
+                        </td>
+                        <td>@a.AirlineName</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(a.LogoUrl))
+                            {
+                                <img src="@a.LogoUrl" height="24"
+                                     alt="@a.AirlineName"
+                                     onerror="this.style.display='none'" />
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+                        <td>
+                            @if (a.IsActive)
+                            {
+                                <span class="badge badge-confirmed px-3">
+                                    Active
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-cancelled px-3">
+                                    Inactive
+                                </span>
+                            }
+                    </td>
+                    <td class="text-end">
+                        <a asp-action="AirlineEdit"
+                           asp-route-id="@a.AirlineId"
+                           class="btn btn-sm btn-outline-secondary me-1">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <form asp-action="AirlineToggle"
+                              asp-route-id="@a.AirlineId"
+                              method="post" style="display:inline">
+                            <button type="submit"
+                                    class="btn btn-sm
+                    @(a.IsActive ? "btn-outline-danger"
+                                                                     : "btn-outline-success")">
+                                @(a.IsActive ? "Deactivate" : "Activate")
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                                }
+            </tbody>
+        </table>
+    </div>
+</div>

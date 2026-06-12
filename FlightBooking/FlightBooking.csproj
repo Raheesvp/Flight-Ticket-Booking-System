@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="Views\Admin\AirportAdd.cshtml" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="Data\Migrations\" />
     <Folder Include="Models\DTOs\" />
     <Folder Include="Views\Flights\" />
@@ -22,5 +26,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <Target Name="TailwindCompile" BeforeTargets="Build">
+    <Exec Command="npx -y tailwindcss -i ./wwwroot/css/tailwind-source.css -o ./wwwroot/css/tailwind.css" />
+  </Target>
 
 </Project>
