@@ -1,5 +1,5 @@
 using FlightBooking.Models.Domain;
-using FlightBooking.Web.Models.ViewModels;
+using FlightBooking.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;

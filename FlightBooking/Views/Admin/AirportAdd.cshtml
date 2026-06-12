@@ -1,0 +1,78 @@
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model AirportViewModel
+@{
+    ViewData["Title"] = "Add airport";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="card border-0 shadow-sm p-4"
+     style="max-width:560px">
+  <h6 class="fw-500 mb-3">New airport</h6>
+  <form asp-action="AirportAdd" method="post">
+    <div asp-validation-summary="All"
+         class="alert alert-danger py-2 small"
+         style="display:none"></div>
+
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label asp-for="IATACode" class="form-label"></label>
+        <input asp-for="IATACode" class="form-control"
+               placeholder="e.g. COK"
+               style="text-transform:uppercase"/>
+        <span asp-validation-for="IATACode"
+              class="text-danger small"></span>
+      </div>
+      <div class="col-md-8">
+        <label asp-for="AirportName"
+               class="form-label"></label>
+        <input asp-for="AirportName"
+               class="form-control"
+               placeholder="Cochin International Airport"/>
+        <span asp-validation-for="AirportName"
+              class="text-danger small"></span>
+      </div>
+      <div class="col-md-6">
+        <label asp-for="City" class="form-label"></label>
+        <input asp-for="City" class="form-control"
+               placeholder="Kochi"/>
+        <span asp-validation-for="City"
+              class="text-danger small"></span>
+      </div>
+      <div class="col-md-6">
+        <label asp-for="Country"
+               class="form-label"></label>
+        <input asp-for="Country"
+               class="form-control"
+               placeholder="India"/>
+        <span asp-validation-for="Country"
+              class="text-danger small"></span>
+      </div>
+      <div class="col-12">
+        <div class="form-check">
+          <input asp-for="IsActive"
+                 class="form-check-input"/>
+          <label asp-for="IsActive"
+                 class="form-check-label">Active</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button type="submit" class="btn btn-primary"
+              style="background:#003580;border:none">
+        Save airport
+      </button>
+      <a asp-action="Airports"
+         class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+@section Scripts {
+  @{ await Html.RenderPartialAsync(
+        "_ValidationScriptsPartial"); }
+}

@@ -17,6 +17,8 @@
         rel="stylesheet" />
   <link rel="stylesheet" href="~/css/admin.css"
         asp-append-version="true" />
+  <link rel="stylesheet" href="~/css/tailwind.css"
+        asp-append-version="true" />
 </head>
 <body class="admin-body">
 
@@ -54,6 +56,11 @@
          @(action=="Airlines" ? "active" : "")"
          asp-controller="Admin" asp-action="Airlines">
         <i class="bi bi-building"></i> Airlines
+      </a>
+      <a class="sidebar-link
+         @(action=="Airports" ? "active" : "")"
+         asp-controller="Admin" asp-action="Airports">
+        <i class="bi bi-geo-alt"></i> Airports
       </a>
     </nav>
 

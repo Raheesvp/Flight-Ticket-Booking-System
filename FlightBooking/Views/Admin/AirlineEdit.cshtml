@@ -1,0 +1,68 @@
+
+@{
+}
+@model AirlineViewModel
+@{
+    ViewData["Title"] = "Edit airline";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="card border-0 shadow-sm p-4"
+     style="max-width:520px">
+    <h6 class="fw-500 mb-3">Edit airline</h6>
+    <form asp-action="AirlineEdit" method="post">
+        <input asp-for="AirlineId" type="hidden" />
+        <div asp-validation-summary="All"
+             class="alert alert-danger py-2 small"
+             style="display:none"></div>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label asp-for="AirlineCode"
+                       class="form-label"></label>
+                <input asp-for="AirlineCode"
+                       class="form-control"
+                       style="text-transform:uppercase" />
+                <span asp-validation-for="AirlineCode"
+                      class="text-danger small"></span>
+            </div>
+            <div class="col-md-8">
+                <label asp-for="AirlineName"
+                       class="form-label"></label>
+                <input asp-for="AirlineName"
+                       class="form-control" />
+                <span asp-validation-for="AirlineName"
+                      class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="LogoUrl"
+                       class="form-label"></label>
+                <input asp-for="LogoUrl"
+                       class="form-control" />
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    <input asp-for="IsActive"
+                           class="form-check-input" />
+                    <label asp-for="IsActive"
+                           class="form-check-label">Active</label>
+                </div>
+            </div>
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit"
+                    class="btn btn-primary"
+                    style="background:#003580;border:none">
+                Update airline
+            </button>
+            <a asp-action="Airlines"
+               class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync(
+                "_ValidationScriptsPartial");
+    }
+}
