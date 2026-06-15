@@ -1,0 +1,117 @@
+@model IEnumerable<FlightBooking.Models.Domain.Flight>
+@{
+    ViewData["Title"] = "Flights";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+@if (TempData["Success"] != null)
+{
+  <div class="alert alert-success alert-dismissible mb-3">
+    @TempData["Success"]
+    <button type="button" class="btn-close"
+            data-bs-dismiss="alert"></button>
+  </div>
+}
+
+<div class="d-flex justify-content-between
+            align-items-center mb-3">
+  <h5 class="mb-0">Flight schedules</h5>
+  <a asp-action="FlightAdd"
+     class="btn btn-sm btn-primary"
+     style="background:#003580;border:none">
+    <i class="bi bi-plus-lg me-1"></i> Add flight
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Flight</th>
+          <th>Route</th>
+          <th>Departure</th>
+          <th>Arrival</th>
+          <th>Seats</th>
+          <th>Base price</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var f in Model)
+        {
+          <tr>
+            <td>
+              <span class="badge"
+                    style="background:#003580">
+                @f.FlightNumber
+              </span>
+            </td>
+            <td>
+              @(f.FromAirport?.IATACode ?? "?")
+              <i class="bi bi-arrow-right mx-1
+                       text-muted"></i>
+              @(f.ToAirport?.IATACode ?? "?")
+            </td>
+            <td>
+              @f.DepartureTime.ToString("dd MMM, HH:mm")
+            </td>
+            <td>
+              @f.ArrivalTime.ToString("dd MMM, HH:mm")
+            </td>
+            <td>
+              @f.AvailableSeats / @f.TotalSeats
+            </td>
+            <td>₹@f.BasePrice.ToString("N0")</td>
+            <td>
+              @{
+                var sc = f.Status switch {
+                  "Scheduled" => "badge-confirmed",
+                  "Delayed"   => "badge-pending",
+                  _           => "badge-cancelled"
+                };
+              }
+              <span class="badge @sc px-3">
+                @f.Status
+              </span>
+            </td>
+            <td class="text-end">
+              <a asp-action="FlightEdit"
+                 asp-route-id="@f.FlightId"
+                 class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <div class="dropdown d-inline-block ms-1">
+                <button class="btn btn-sm btn-outline-secondary
+                               dropdown-toggle"
+                        data-bs-toggle="dropdown">
+                  Status
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  @foreach (var s in new[]{"Scheduled",
+                                          "Delayed","Cancelled"})
+                  {
+                    <li>
+                      <form asp-action="FlightStatusChange"
+                            method="post">
+                        <input type="hidden"
+                               name="id"
+                               value="@f.FlightId"/>
+                        <input type="hidden"
+                               name="status"
+                               value="@s"/>
+                        <button class="dropdown-item"
+                                type="submit">@s</button>
+                      </form>
+                    </li>
+                  }
+                </ul>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

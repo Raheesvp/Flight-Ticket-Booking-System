@@ -1,9 +1,11 @@
-using FlightBooking.Data;
+﻿using FlightBooking.Data;
 using FlightBooking.Models.Domain;
 using FlightBooking.Models.ViewModels;
+using FlightBooking.Web.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace FlightBooking.Controllers
 {
@@ -49,8 +51,7 @@ namespace FlightBooking.Controllers
 
         }
 
-        public IActionResult Flights() => View();
-        public IActionResult Bookings() => View();
+                public IActionResult Bookings() => View();
         public IActionResult Users() => View();
 
         [HttpGet]
@@ -234,6 +235,176 @@ namespace FlightBooking.Controllers
             return RedirectToAction("Airlines");
         }
 
+        // ?? FLIGHTS ????????????????????????????????????
+
+        private async Task PopulateFlightDropdowns(
+            FlightViewModel vm)
+        {
+            var airlines = await _uow.Airlines
+                .FindAsync(a => a.IsActive);
+            var airports = await _uow.Airports
+                .FindAsync(a => a.IsActive);
+
+            vm.Airlines = airlines
+                .OrderBy(a => a.AirlineName)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.AirlineId.ToString(),
+                    Text = $"{a.AirlineCode} — {a.AirlineName}"
+                });
+
+            vm.Airports = airports
+                .OrderBy(a => a.City)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.AirportId.ToString(),
+                    Text = $"{a.IATACode} — {a.City}"
+                });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Flights()
+        {
+            var flights = await _uow.Flights.GetAllAsync();
+            return View(flights
+                .OrderBy(f => f.DepartureTime));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> FlightAdd()
+        {
+            var vm = new FlightViewModel
+            {
+                DepartureTime = DateTime.Today.AddHours(8),
+                ArrivalTime = DateTime.Today.AddHours(10),
+                TotalSeats = 180,
+                Status = "Scheduled"
+            };
+            await PopulateFlightDropdowns(vm);
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FlightAdd(
+            FlightViewModel vm)
+        {
+            if (vm.ArrivalTime <= vm.DepartureTime)
+                ModelState.AddModelError("ArrivalTime",
+                    "Arrival must be after departure.");
+
+            if (vm.FromAirportId == vm.ToAirportId)
+                ModelState.AddModelError("ToAirportId",
+                    "From and To airports cannot be the same.");
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateFlightDropdowns(vm);
+                return View(vm);
+            }
+
+            await _uow.Flights.AddAsync(new Flight
+            {
+                FlightNumber = vm.FlightNumber.ToUpper().Trim(),
+                AirlineId = vm.AirlineId,
+                FromAirportId = vm.FromAirportId,
+                ToAirportId = vm.ToAirportId,
+                DepartureTime = vm.DepartureTime,
+                ArrivalTime = vm.ArrivalTime,
+                DurationMinutes = vm.DurationMinutes,
+                AircraftType = vm.AircraftType?.Trim(),
+                TotalSeats = vm.TotalSeats,
+                AvailableSeats = vm.TotalSeats,  // start = total
+                BasePrice = vm.BasePrice,
+                Status = vm.Status
+            });
+            await _uow.SaveChangesAsync();
+
+            TempData["Success"] = "Flight added.";
+            return RedirectToAction("Flights");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> FlightEdit(int id)
+        {
+            var f = await _uow.Flights.GetByIdAsync(id);
+            if (f == null) return NotFound();
+
+            var vm = new FlightViewModel
+            {
+                FlightId = f.FlightId,
+                FlightNumber = f.FlightNumber,
+                AirlineId = f.AirlineId,
+                FromAirportId = f.FromAirportId,
+                ToAirportId = f.ToAirportId,
+                DepartureTime = f.DepartureTime,
+                ArrivalTime = f.ArrivalTime,
+                DurationMinutes = f.DurationMinutes,
+                AircraftType = f.AircraftType,
+                TotalSeats = f.TotalSeats,
+                BasePrice = f.BasePrice,
+                Status = f.Status
+            };
+            await PopulateFlightDropdowns(vm);
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FlightEdit(
+            FlightViewModel vm)
+        {
+            if (vm.ArrivalTime <= vm.DepartureTime)
+                ModelState.AddModelError("ArrivalTime",
+                    "Arrival must be after departure.");
+
+            if (vm.FromAirportId == vm.ToAirportId)
+                ModelState.AddModelError("ToAirportId",
+                    "From and To airports cannot be same.");
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateFlightDropdowns(vm);
+                return View(vm);
+            }
+
+            var f = await _uow.Flights.GetByIdAsync(vm.FlightId);
+            if (f == null) return NotFound();
+
+            f.FlightNumber = vm.FlightNumber.ToUpper().Trim();
+            f.AirlineId = vm.AirlineId;
+            f.FromAirportId = vm.FromAirportId;
+            f.ToAirportId = vm.ToAirportId;
+            f.DepartureTime = vm.DepartureTime;
+            f.ArrivalTime = vm.ArrivalTime;
+            f.DurationMinutes = vm.DurationMinutes;
+            f.AircraftType = vm.AircraftType?.Trim();
+            f.TotalSeats = vm.TotalSeats;
+            f.BasePrice = vm.BasePrice;
+            f.Status = vm.Status;
+
+            _uow.Flights.Update(f);
+            await _uow.SaveChangesAsync();
+
+            TempData["Success"] = "Flight updated.";
+            return RedirectToAction("Flights");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FlightStatusChange(
+            int id, string status)
+        {
+            var f = await _uow.Flights.GetByIdAsync(id);
+            if (f == null) return NotFound();
+
+            f.Status = status; // Scheduled|Delayed|Cancelled
+            _uow.Flights.Update(f);
+            await _uow.SaveChangesAsync();
+            return RedirectToAction("Flights");
+        }
+
 
     }
 }
+
