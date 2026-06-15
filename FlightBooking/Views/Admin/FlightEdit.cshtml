@@ -1,0 +1,159 @@
+﻿@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+}
+@model FlightBooking.Web.Models.ViewModels.FlightViewModel
+@{
+    ViewData["Title"] = "Edit flight";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="card border-0 shadow-sm p-4"
+     style="max-width:700px">
+    <h6 class="fw-500 mb-3">New flight schedule</h6>
+
+    <form asp-action="FlightEdit" method="post">
+        <div asp-validation-summary="All"
+             class="alert alert-danger py-2 small"
+             style="display:none"></div>
+
+        <div class="row g-3">
+
+            <div class="col-md-4">
+                <label asp-for="FlightNumber"
+                       class="form-label"></label>
+                <input asp-for="FlightId" type="hidden" />
+                <input asp-for="FlightNumber"
+                       class="form-control"
+                       placeholder="6E-201"
+                       style="text-transform:uppercase" />
+                <span asp-validation-for="FlightNumber"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-8">
+                <label asp-for="AirlineId"
+                       class="form-label"></label>
+                <select asp-for="AirlineId"
+                        asp-items="Model.Airlines"
+                        class="form-select">
+                    <option value="">— Select airline —</option>
+                </select>
+                <span asp-validation-for="AirlineId"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="FromAirportId"
+                       class="form-label"></label>
+                <select asp-for="FromAirportId"
+                        asp-items="Model.Airports"
+                        class="form-select">
+                    <option value="">— From —</option>
+                </select>
+                <span asp-validation-for="FromAirportId"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="ToAirportId"
+                       class="form-label"></label>
+                <select asp-for="ToAirportId"
+                        asp-items="Model.Airports"
+                        class="form-select">
+                    <option value="">— To —</option>
+                </select>
+                <span asp-validation-for="ToAirportId"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="DepartureTime"
+                       class="form-label"></label>
+                <input asp-for="DepartureTime"
+                       type="datetime-local"
+                       class="form-control" />
+                <span asp-validation-for="DepartureTime"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="ArrivalTime"
+                       class="form-label"></label>
+                <input asp-for="ArrivalTime"
+                       type="datetime-local"
+                       class="form-control" />
+                <span asp-validation-for="ArrivalTime"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="DurationMinutes"
+                       class="form-label"></label>
+                <input asp-for="DurationMinutes"
+                       type="number" min="1" max="600"
+                       class="form-control" />
+                <span asp-validation-for="DurationMinutes"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="AircraftType"
+                       class="form-label"></label>
+                <input asp-for="AircraftType"
+                       class="form-control"
+                       placeholder="Boeing 737" />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="TotalSeats"
+                       class="form-label"></label>
+                <input asp-for="TotalSeats"
+                       type="number" min="1"
+                       class="form-control" />
+                <span asp-validation-for="TotalSeats"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="BasePrice"
+                       class="form-label"></label>
+                <input asp-for="BasePrice"
+                       type="number" min="0" step="0.01"
+                       class="form-control" />
+                <span asp-validation-for="BasePrice"
+                      class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="Status"
+                       class="form-label"></label>
+                <select asp-for="Status"
+                        class="form-select">
+                    <option>Scheduled</option>
+                    <option>Delayed</option>
+                    <option>Cancelled</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit"
+                    class="btn btn-primary"
+                    style="background:#003580;border:none">
+                Update flight
+            </button>
+            <a asp-action="Flights"
+               class="btn btn-outline-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync(
+                "_ValidationScriptsPartial");
+    }
+}
