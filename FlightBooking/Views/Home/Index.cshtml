@@ -1,4 +1,4 @@
-﻿@model IEnumerable<FlightBooking.Models.Domain.Airport>
+@model IEnumerable<FlightBooking.Models.Domain.Airport>
 
 @{
     ViewData["Title"] = "Home";
@@ -46,7 +46,15 @@
                 <button class="trip-tab" onclick="setTrip(this,'M')">Multi City</button>
             </div>
 
-            <form asp-controller="Flight" asp-action="Search" method="get">
+            <!-- BEFORE (Day 4 placeholder) -->
+            <form asp-controller="Flight"
+                  asp-action="Search"
+                  method="get">
+
+            <!-- Already correct — just confirm field names match -->
+            <!-- fromAirportId, toAirportId, departureDate,
+                 passengers, journeyClass, tripType -->
+            <!-- These exact names bind to SearchViewModel properties -->
                 <input type="hidden" name="tripType" id="tripType" value="O" />
 
                 <div class="row g-3 align-items-end">
