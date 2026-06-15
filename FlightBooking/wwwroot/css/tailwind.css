@@ -153,6 +153,11 @@
   margin-right: 0.25rem
 }
 
+.mx-2 {
+  margin-left: 0.5rem;
+  margin-right: 0.5rem
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto
@@ -165,6 +170,10 @@
 
 .mb-0 {
   margin-bottom: 0px
+}
+
+.mb-1 {
+  margin-bottom: 0.25rem
 }
 
 .mb-2 {
@@ -197,6 +206,10 @@
 
 .ms-auto {
   margin-inline-start: auto
+}
+
+.mt-1 {
+  margin-top: 0.25rem
 }
 
 .mt-2 {
