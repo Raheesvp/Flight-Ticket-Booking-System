@@ -1,0 +1,220 @@
+@model FlightBooking.Models.Domain.Flight
+@{
+    ViewData["Title"] = "Select Seats";
+    int flightId = ViewBag.FlightId;
+    int passengers = ViewBag.Passengers;
+    string journeyClass = ViewBag.JourneyClass;
+    decimal basePrice = ViewBag.BasePrice;
+}
+
+<div class="container my-5">
+    <div class="row">
+        <div class="col-md-8 text-center card p-4 shadow-sm border-0">
+            <h3 class="mb-4 text-navy">Choose Your Seats</h3>
+            <div class="w-70 mx-auto bg-dark text-white py-2 rounded-pill mb-5 border-bottom border-3 border-secondary">
+                <small class="fw-bold tracking-widest text-uppercase">Front of Aircraft / Screen</small>
+            </div>
+
+            <div id="seat-grid-loader" class="spinner-border text-primary my-4" role="status"></div>
+            <div id="cabin-layout" class="d-flex flex-column align-items-center d-none">
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-4 shadow-sm border-0 position-sticky" style="top: 20px;">
+                <h4 class="text-navy pb-2 border-bottom">Booking Summary</h4>
+                <p class="text-muted my-2"><strong>Flight:</strong> @ViewBag.FlightInfo</p>
+                <p class="text-muted"><strong>Route:</strong> @Model.FromAirport.IATACode &rarr; @Model.ToAirport.IATACode</p>
+
+                <hr />
+
+                <div class="d-flex justify-content-between align-items-center my-2">
+                    <span>Passengers:</span>
+                    <span class="badge bg-secondary p-2">@passengers Ticket(s)</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center my-2">
+                    <span>Class Preference:</span>
+                    <span class="badge bg-info text-white p-2 text-uppercase">@journeyClass</span>
+                </div>
+
+                <div class="my-3">
+                    <label class="text-muted d-block small mb-1">Selected Seats:</label>
+                    <div id="selected-seats-badges" class="d-flex flex-wrap gap-2">
+                        <span class="text-muted small italic">No seats selected yet</span>
+                    </div>
+                </div>
+
+                <hr />
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="m-0">Total Fair:</h5>
+                    <h3 class="text-orange fw-bold m-0" id="total-price-display">INR 0.00</h3>
+                </div>
+
+                <div id="selection-warning" class="alert alert-warning small p-2 mb-3">
+                    Please select exactly @passengers seat(s) to continue.
+                </div>
+
+                <a id="btn-continue-booking" href="#" class="btn btn-warning w-100 fw-bold py-2 disabled text-uppercase">
+                    Continue to Booking
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-navy { color: #1a1a2e; }
+    .text-orange { color: #ff6f3c; }
+    .bg-navy { background-color: #1a1a2e !important; }
+
+    .plane-row {
+        display: grid;
+        grid-template-columns: repeat(3, 45px) 40px repeat(3, 45px);
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .seat-node {
+        width: 45px;
+        height: 42px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+    }
+    .seat-business { background-color: #e3f2fd; color: #0d47a1; border-color: #90caf9; }
+    .seat-economy { background-color: #e8f5e9; color: #1b5e20; border-color: #a5d6a7; }
+    .seat-occupied { background-color: #ffebee; color: #c62828; border-color: #ef9a9a; cursor: not-allowed; opacity: 0.6; }
+    .seat-selected { background-color: #1a1a2e !important; color: #ffffff !important; border-color: #ff6f3c !important; }
+    .aisle-label { text-align: center; font-weight: bold; color: #a0a0a0; font-size: 12px; }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const flightId = @flightId;
+            const maxPassengers = @passengers;
+            const baseTicketPrice = parseFloat("@basePrice");
+
+            let selectedSeats = [];
+
+            // Cache UI Elements
+            const loader = document.getElementById("seat-grid-loader");
+            const cabinLayout = document.getElementById("cabin-layout");
+            const badgesContainer = document.getElementById("selected-seats-badges");
+            const priceDisplay = document.getElementById("total-price-display");
+            const warningAlert = document.getElementById("selection-warning");
+            const continueBtn = document.getElementById("btn-continue-booking");
+
+            // Fetch seats from JSON API
+            fetch(`/api/seats/${flightId}`)
+                .then(res => res.json())
+                .then(seats => {
+                    loader.classList.add("d-none");
+                    cabinLayout.classList.remove("d-none");
+
+                    let currentRow = 0;
+                    let rowDiv = null;
+
+                    seats.forEach((seat, index) => {
+                        // Group items every 6 nodes into single layout rows
+                        if (index % 6 === 0) {
+                            currentRow++;
+                            rowDiv = document.createElement("div");
+                            rowDiv.className = "plane-row";
+                            cabinLayout.appendChild(rowDiv);
+                        }
+
+                        // Create seat element
+                        const seatNode = document.createElement("div");
+                        seatNode.innerText = seat.seatNumber;
+
+                        if (!seat.isAvailable) {
+                            seatNode.className = "seat-node seat-occupied";
+                        } else {
+                            const initialClass = seat.seatClass === "Business" ? "seat-business" : "seat-economy";
+                            seatNode.className = `seat-node ${initialClass}`;
+
+                            // Event listener for selectable seats
+                            seatNode.addEventListener("click", () => toggleSeatSelection(seat, seatNode));
+                        }
+
+                        // Inject structure node elements
+                        rowDiv.appendChild(seatNode);
+
+                        // Inject the central walk aisle after column index position 'C'
+                        if (index % 6 === 2) {
+                            const aisle = document.createElement("div");
+                            aisle.className = "aisle-label";
+                            aisle.innerText = currentRow;
+                            rowDiv.appendChild(aisle);
+                        }
+                    });
+                });
+
+            function toggleSeatSelection(seat, element) {
+                const index = selectedSeats.findIndex(s => s.seatId === seat.seatId);
+
+                if (index > -1) {
+                    // Deselect if already present
+                    selectedSeats.splice(index, 1);
+                    element.classList.remove("seat-selected");
+                } else {
+                    // Handle shifting limits over configuration bound metrics
+                    if (selectedSeats.length >= maxPassengers) {
+                        const oldest = selectedSeats.shift();
+                        const oldNode = Array.from(document.querySelectorAll('.seat-node')).find(n => n.innerText === oldest.seatNumber);
+                        if (oldNode) oldNode.classList.remove("seat-selected");
+                    }
+                    selectedSeats.push(seat);
+                    element.classList.add("seat-selected");
+                }
+                updateSidebarState();
+            }
+
+            function updateSidebarState() {
+                // Update Badge Elements
+                if (selectedSeats.length === 0) {
+                    badgesContainer.innerHTML = '<span class="text-muted small italic">No seats selected yet</span>';
+                } else {
+                    badgesContainer.innerHTML = selectedSeats.map(s =>
+                        `<span class="badge bg-navy p-2">${s.seatNumber} <small class="text-orange">(${s.seatClass[0]})</small></span>`
+                    ).join('');
+                }
+
+                // Calculate updated prices based on business increments
+                let cumulativePrice = 0;
+                selectedSeats.forEach(s => {
+                    let premiumMultiplier = s.seatClass === "Business" ? 1.5 : 1.0;
+                    cumulativePrice += (baseTicketPrice * premiumMultiplier);
+                });
+
+                priceDisplay.innerText = `INR ${cumulativePrice.toFixed(2)}`;
+
+                // Handle validation guards
+                if (selectedSeats.length === maxPassengers) {
+                    warningAlert.classList.add("d-none");
+                    continueBtn.classList.remove("disabled");
+                    continueBtn.classList.replace("btn-warning", "bg-navy");
+                    continueBtn.style.color = "#ffffff";
+
+                    // Build navigation parameters targeting the next wizard node
+                    const seatIdsParam = selectedSeats.map(s => s.seatId).join(',');
+                    continueBtn.href = `/Booking/Start?flightId=${flightId}&passengers=${maxPassengers}&seatIds=${seatIdsParam}`;
+                } else {
+                    warningAlert.classList.remove("d-none");
+                    continueBtn.classList.add("disabled");
+                    continueBtn.classList.replace("bg-navy", "btn-warning");
+                    continueBtn.style.color = "";
+                    continueBtn.href = "#";
+                }
+            }
+        });
+    </script>
+}

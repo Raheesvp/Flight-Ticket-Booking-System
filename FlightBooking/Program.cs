@@ -3,6 +3,7 @@ using FlightBooking.Web.Data;
 using FlightBooking.Models.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using FlightBooking.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,6 +48,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 });
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<SeatService>();
 
 
 builder.Services.AddSession();
@@ -60,6 +62,8 @@ using (var scope = app.Services.CreateScope())
 
     // Ensure DB is created/migrated if you want (optional)
     var context = svc.GetRequiredService<AppDbContext>();
+
+    DbSeeder.Seed(context);
 
     // Roles + admin user seed
     await RoleSeeder.SeedAsync(
@@ -84,10 +88,13 @@ app.UseRouting();
 app.UseStatusCodePagesWithReExecute("/Home/NotFound404");
 
 app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllers();
 
 app.Run();

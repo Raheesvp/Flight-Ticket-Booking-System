@@ -1,4 +1,4 @@
-﻿using Microsoft.Identity.Client;
+using Microsoft.Identity.Client;
 using System.ComponentModel.DataAnnotations;
 
 
@@ -6,8 +6,6 @@ namespace FlightBooking.Models.ViewModels
 {
     public class SearchViewModel
     {
-        [Required]
-        public int AirportId { get; set; }
 
         public int FromAirportId { get; set; }
 

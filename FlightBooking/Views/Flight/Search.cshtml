@@ -126,15 +126,14 @@
                             </p>
                             @if (f.HasSeats)
                             {
-                                <a asp-controller="Booking"
-                                   asp-action="Start"
-                                   asp-route-flightId="@f.FlightId"
-                                   asp-route-passengers="@sm?.Passengers"
-                                   asp-route-class="@sm?.JourneyClass"
-                                   class="btn btn-sm btn-primary w-100"
-                                   style="background:#ff6600;border:none">
-                                    Book now
-                                </a>
+                                    <a asp-controller="Flight"
+                                       asp-action="SeatMap"
+                                       asp-route-flightId="@f.FlightId"
+                                       asp-route-passengers="@sm?.Passengers"
+                                       asp-route-journeyClass="@sm?.JourneyClass"
+                                       class="btn btn-warning fw-bold px-4 text-white text-uppercase">
+                                        Book Now
+                                    </a>
                             }
                             else
                             {
