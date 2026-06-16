@@ -1,4 +1,5 @@
 ﻿using FlightBooking.Models.ViewModels;
+using FlightBooking.Services;
 using FlightBooking.Web.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,10 +10,12 @@ namespace FlightBooking.Controllers
     {
 
         private readonly AppDbContext _dbcontext;
-       
-        public FlightController(AppDbContext dbcontext)
+        private readonly SeatService _seatService;
+
+        public FlightController(AppDbContext dbcontext, SeatService seatService)
         {
             _dbcontext = dbcontext;
+            _seatService = seatService;
         }
 
         [HttpGet]
@@ -75,7 +78,32 @@ namespace FlightBooking.Controllers
                 ?.ToAirport?.City ?? "";
 
             return View(results);
-        
-    }
+
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> SeatMap(int flightId, int passengers, string journeyClass)
+        {
+            var flight = await _dbcontext.Flights
+                .Include(f => f.Airline)
+                .Include(f => f.FromAirport)
+                .Include(f => f.ToAirport)
+                .FirstOrDefaultAsync(f => f.FlightId == flightId);
+
+            if (flight == null)
+            {
+                return NotFound();
+            }
+
+            await _seatService.EnsureSeatsAsync(flightId, 30);
+
+            ViewBag.FlightId = flightId;
+            ViewBag.Passengers = passengers;
+            ViewBag.JourneyClass = journeyClass;
+            ViewBag.BasePrice = flight.BasePrice;
+            ViewBag.FlightInfo = $"{flight.Airline.AirlineName} ({flight.FlightNumber})";
+
+            return View(flight);
+        }
     }
 }
