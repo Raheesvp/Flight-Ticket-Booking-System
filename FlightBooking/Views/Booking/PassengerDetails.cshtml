@@ -1,0 +1,117 @@
+@model FlightBooking.Web.Models.ViewModels.PassengerDetailsVM
+@{
+    ViewData["Title"] = "Passenger Details";
+}
+
+<div class="container my-5">
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <div class="d-flex justify-content-center align-items-center gap-3">
+                <span class="badge bg-secondary p-2">1. Select Flight</span>
+                <span class="text-muted">&rarr;</span>
+                <span class="badge bg-secondary p-2">2. Choose Seats</span>
+                <span class="text-muted">&rarr;</span>
+                <span class="badge bg-navy p-2 text-white text-uppercase">3. Passengers</span>
+                <span class="text-muted">&rarr;</span>
+                <span class="badge bg-light text-muted p-2">4. Payment</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card p-4 shadow-sm border-0 mb-4">
+                <h3 class="text-navy border-bottom pb-3 mb-4">Passenger Manifest Details</h3>
+                
+                <form asp-controller="Booking" asp-action="SavePassengers" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    
+                    <input type="hidden" asp-for="FlightId" />
+                    <input type="hidden" asp-for="PassengerCount" />
+                    <input type="hidden" asp-for="SeatIdsString" />
+
+                    @for (int i = 0; i < Model.Passengers.Count; i++)
+                    {
+                        <div class="card p-3 border mb-3 shadow-none bg-light">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="m-0 text-navy fw-bold">Passenger #@(i + 1)</h5>
+                                <span class="badge bg-dark text-white p-2">
+                                    Seat: @Model.Passengers[i].AssignedSeatNumber
+                                </span>
+                            </div>
+
+                            <input type="hidden" asp-for="Passengers[i].AssignedSeatId" />
+                            <input type="hidden" asp-for="Passengers[i].AssignedSeatNumber" />
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label asp-for="Passengers[i].Name" class="form-label small fw-bold text-muted">Full Name</label>
+                                    <input asp-for="Passengers[i].Name" class="form-control" />
+                                    <span asp-validation-for="Passengers[i].Name" class="text-danger small"></span>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label asp-for="Passengers[i].Age" class="form-label small fw-bold text-muted">Age</label>
+                                    <input asp-for="Passengers[i].Age" type="number" class="form-control" />
+                                    <span asp-validation-for="Passengers[i].Age" class="text-danger small"></span>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <label asp-for="Passengers[i].Gender" class="form-label small fw-bold text-muted">Gender</label>
+                                    <select asp-for="Passengers[i].Gender" class="form-select">
+                                        <option value="">Select</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <span asp-validation-for="Passengers[i].Gender" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <button type="submit" class="btn btn-warning text-white fw-bold py-2 px-5 mt-3 text-uppercase border-0 shadow-sm" style="background-color: #ff6f3c !important;">
+                        Proceed to Summary
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-4 shadow-sm border-0 position-sticky bg-navy text-white" style="top: 20px; background-color: #1a1a2e;">
+                <h4 class="pb-2 border-bottom border-secondary text-white">Flight Overview</h4>
+                <div class="my-3">
+                    <small class="text-muted d-block uppercase tracking-wide">Aircraft & Service</small>
+                    <span class="fw-bold text-white">@ViewBag.FlightDetails</span>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block uppercase tracking-wide">Route Segment</small>
+                    <span class="fw-bold text-white">@ViewBag.RouteDetails</span>
+                </div>
+                
+                <hr class="border-secondary" />
+                
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">Total Bookings Allocated:</span>
+                    <span class="fw-bold text-white">@Model.PassengerCount Pax</span>
+                </div>
+
+                <hr class="border-secondary" />
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 text-white">Grand Total:</h5>
+                    <h3 class="fw-bold m-0" style="color: #ff6f3c;">INR @string.Format("{0:N2}", ViewBag.TotalAmount)</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+<style>
+    .text-navy { color: #1a1a2e; }
+    .bg-navy { background-color: #1a1a2e !important; }
+</style>
