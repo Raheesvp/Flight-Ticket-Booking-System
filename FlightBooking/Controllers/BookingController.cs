@@ -83,7 +83,7 @@ namespace FlightBooking.Controllers
             HttpContext.Session.SetString("CurrentBookingSession", JsonSerializer.Serialize(sessionData));
 
             ViewBag.FlightDetails = $"{flight.Airline.AirlineName} - {flight.FlightNumber}";
-            ViewBag.RouteDetails = $"{flight.FromAirport.City} ({flight.FromAirport.IATA}) to {flight.ToAirport.City} ({flight.ToAirport.IATA})";
+            ViewBag.RouteDetails = $"{flight.FromAirport.City} ({flight.FromAirport.IATACode}) to {flight.ToAirport.City} ({flight.ToAirport.IATACode})";
             ViewBag.TotalAmount = computedTotal;
 
             return View("PassengerDetails", viewModel);
@@ -114,14 +114,102 @@ namespace FlightBooking.Controllers
         }
 
         [HttpGet]
-        public IActionResult Summary()
+        public async Task<IActionResult> Summary()
         {
-            // Placeholder endpoint to fulfill PR validation paths cleanly for Day 13
             var sessionStr = HttpContext.Session.GetString("CurrentBookingSession");
-            if (string.IsNullOrEmpty(sessionStr)) return RedirectToAction("Index", "Home");
+            var manifestStr = HttpContext.Session.GetString("CapturedPassengerManifest");
 
-            ViewBag.SuccessMessage = TempData["Success"];
-            return System.Web.Mvc.HttpVerbs.Get == 0 ? Content("Booking Funnel State Locked. Ready for Day 14 Checkout.") : Content("Booking Funnel State Locked. Ready for Day 14 Checkout.");
+            if (string.IsNullOrEmpty(sessionStr) || string.IsNullOrEmpty(manifestStr))
+            {
+                TempData["Error"] = "Your booking session has expired. Please select your flight again.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            var sessionData = JsonSerializer.Deserialize<BookingSessionVM>(sessionStr);
+            var passengersList = JsonSerializer.Deserialize<List<PassengerInputModel>>(manifestStr);
+
+            if (sessionData == null || passengersList == null) return RedirectToAction("Index", "Home");
+
+            var flight = await _db.Flights
+                .Include(f => f.Airline)
+                .Include(f => f.FromAirport)
+                .Include(f => f.ToAirport)
+                .FirstOrDefaultAsync(f => f.FlightId == sessionData.FlightId);
+
+            if (flight == null) return NotFound();
+
+            // Mocking structural catalogs (to be mapped to database configuration rows on Day 15)
+            var baggageOptions = new List<BaggageOptionDTO>
+            {
+                new BaggageOptionDTO { Id = 1, Label = "Standard Cabin (7 KG Included)", Price = 0.00m },
+                new BaggageOptionDTO { Id = 2, Label = "Medium Check-In (15 KG)", Price = 450.00m },
+                new BaggageOptionDTO { Id = 3, Label = "Heavy Check-In (25 KG)", Price = 950.00m }
+            };
+
+            var mealOptions = new List<MealOptionDTO>
+            {
+                new MealOptionDTO { Id = 1, Name = "No Meal Service Choice", Price = 0.00m },
+                new MealOptionDTO { Id = 2, Name = "Vegetarian Hot Platter", Price = 250.00m },
+                new MealOptionDTO { Id = 3, Name = "Continental Diabetic Meal", Price = 350.00m }
+            };
+
+            var viewModel = new BookingSummary
+            {
+                FlightId = flight.FlightId,
+                Flight = flight,
+                PassengerCount = sessionData.PassengerCount,
+                BaseFareAndSeatsTotal = sessionData.TotalAmount,
+                AvailableBaggage = baggageOptions,
+                AvailableMeals = mealOptions
+            };
+
+            for (int i = 0; i < passengersList.Count; i++)
+            {
+                viewModel.Passengers.Add(new PassengerSummaryItemVM
+                {
+                    Index = i,
+                    Name = passengersList[i].Name,
+                    Age = passengersList[i].Age,
+                    Gender = passengersList[i].Gender,
+                    SeatId = passengersList[i].AssignedSeatId,
+                    SeatNumber = passengersList[i].AssignedSeatNumber
+                });
+
+                // Initialize empty configuration array trackers for binding
+                viewModel.Selections.Add(new PassengerAddOnSelection
+                {
+                    PassengerIndex = i,
+                    SelectedBaggageId = 1, // default to index item 1
+                    SelectedMealId = 1     // default to index item 1
+                });
+            }
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ConfirmAddOns(BookingSummary model)
+        {
+            if (model.Selections == null || model.Selections.Count == 0)
+            {
+                ModelState.AddModelError("", "Add-on structure mapping configuration is invalid.");
+                return RedirectToAction(nameof(Summary));
+            }
+
+            // Save auxiliary selections securely back into the user session state
+            HttpContext.Session.SetString("FinalAncillarySelections", JsonSerializer.Serialize(model.Selections));
+
+            TempData["Success"] = "Ancillary add-ons mapped successfully! Flight state is locked.";
+
+            // Post-Redirect-Get pattern compliance targeting Day 15 Payment module Gateway
+            return RedirectToAction("GatewayRedirect");
+        }
+
+        [HttpGet]
+        public IActionResult GatewayRedirect()
+        {
+            return Content("Booking funnel state locked down. Ready for Day 15 Razorpay Payment integration.");
         }
 
 
