@@ -117,34 +117,47 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function () {
-            const baseFareAndSeats = parseFloat("@Model.BaseFareAndSeatsTotal");
+        document.addEventListener("DOMContentLoaded", function () {
+            const baseFareAndSeats = parseFloat("@Model.BaseFareAndSeatsTotal".replace(/,/g, '')) || 0.0;
 
             function recalculateTotals() {
                 let ancillaryTotal = 0.0;
 
                 // Loop through selected baggage items and extract prices via data descriptors
-                $(".baggage-select").each(function () {
-                    const selectedOpt = $(this).find("option:selected");
-                    ancillaryTotal += parseFloat(selectedOpt.data("price")) || 0.0;
+                document.querySelectorAll(".baggage-select").forEach(function (select) {
+                    const selectedOpt = select.options[select.selectedIndex];
+                    if (selectedOpt) {
+                        ancillaryTotal += parseFloat(selectedOpt.getAttribute("data-price")) || 0.0;
+                    }
                 });
 
                 // Loop through selected dining items
-                $(".meal-select").each(function () {
-                    const selectedOpt = $(this).find("option:selected");
-                    ancillaryTotal += parseFloat(selectedOpt.data("price")) || 0.0;
+                document.querySelectorAll(".meal-select").forEach(function (select) {
+                    const selectedOpt = select.options[select.selectedIndex];
+                    if (selectedOpt) {
+                        ancillaryTotal += parseFloat(selectedOpt.getAttribute("data-price")) || 0.0;
+                    }
                 });
 
                 const grandTotal = baseFareAndSeats + ancillaryTotal;
 
                 // Update text configurations dynamically
-                $("#ancillary-total-display").text("INR " + ancillaryTotal.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
-                $("#grand-total-display").text("INR " + grandTotal.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,'));
+                const ancillaryTotalDisplay = document.getElementById("ancillary-total-display");
+                const grandTotalDisplay = document.getElementById("grand-total-display");
+
+                if (ancillaryTotalDisplay) {
+                    ancillaryTotalDisplay.innerText = "INR " + ancillaryTotal.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+                }
+                if (grandTotalDisplay) {
+                    grandTotalDisplay.innerText = "INR " + grandTotal.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+                }
             }
 
             // Listen for tracking changes on inputs
-            $(document).on("change", ".baggage-select, .meal-select", function () {
-                recalculateTotals();
+            document.addEventListener("change", function (e) {
+                if (e.target && (e.target.classList.contains("baggage-select") || e.target.classList.contains("meal-select"))) {
+                    recalculateTotals();
+                }
             });
 
             // Run initial execution count on window ready
