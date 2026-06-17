@@ -1,0 +1,80 @@
+@model FlightBooking.Models.Domain.Booking
+@{ ViewData["Title"] = "Booking Confirmed"; }
+
+<div class="container my-5">
+    <div class="card border-0 shadow p-5 text-center mb-4 bg-light">
+        <div class="mb-3"><i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i></div>
+        <h2 class="text-navy fw-bold">Ticket Confirmed Successfully!</h2>
+        <p class="text-muted">Your booking reference record has been issued. A confirmation receipt has been dispatched.</p>
+        <div class="d-inline-block bg-navy text-white px-4 py-3 rounded my-2">
+            <span class="d-block small text-muted text-uppercase tracking-wider">Booking PNR Reference</span>
+            <h1 class="m-0 fw-bold tracking-widest text-warning text-uppercase">@Model.PNR</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card p-4 shadow-sm border-0 mb-4">
+                <h4 class="text-navy fw-bold border-bottom pb-2 mb-3">Flight Manifest Specifics</h4>
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <h5>@Model.Flight.FromAirport.City (@Model.Flight.FromAirport.IATACode)</h5>
+                        <small class="text-muted">@Model.Flight.DepartureTime.ToString("f")</small>
+                    </div>
+                    <div class="col-md-2 text-center text-muted">
+                        <i class="bi bi-airplane-fill fs-3"></i>
+                        <small class="d-block text-uppercase">@Model.Flight.FlightNumber</small>
+                    </div>
+                    <div class="col-md-5 text-md-end">
+                        <h5>@Model.Flight.ToAirport.City (@Model.Flight.ToAirport.IATACode)</h5>
+                        <small class="text-muted">@Model.Flight.ArrivalTime.ToString("f")</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-4 shadow-sm border-0">
+                <h4 class="text-navy fw-bold border-bottom pb-2 mb-3">Passenger Boarding Logs</h4>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Age / Gender</th>
+                                <th>Status Badge</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach(var pax in Model.Passengers)
+                            {
+                                <tr>
+                                    <td><strong class="text-navy">@pax.FullName</strong></td>
+                                    <td>@pax.Age Yrs / @pax.Gender</td>
+                                    <td><span class="badge bg-success">Confirmed Seat</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card p-4 shadow-sm border-0 bg-navy text-white" style="background-color: #1a1a2e;">
+                <h4 class="border-bottom border-secondary pb-2 text-white">Payment Receipt</h4>
+                <div class="d-flex justify-content-between my-2 text-muted small">
+                    <span>Transaction Token:</span>
+                    <span class="text-white">@Model.Payment?.TransactionId</span>
+                </div>
+                <div class="d-flex justify-content-between my-2 text-muted small">
+                    <span>Invoice Standard:</span>
+                    <span class="text-white">Paid via API Wallet</span>
+                </div>
+                <hr class="border-secondary" />
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold">Settled Fare Total:</span>
+                    <h3 class="text-orange m-0 fw-bold" style="color: #ff6f3c;">INR @string.Format("{0:N2}", Model.TotalAmount)</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

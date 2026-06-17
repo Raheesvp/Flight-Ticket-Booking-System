@@ -3,16 +3,28 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using FlightBooking.Web.Models.ViewModels;
+using FlightBooking.Data;
+using FlightBooking.Services;
+using FlightBooking.Models.ViewModels;
+using FlightBooking.Models.Domain;
+using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
 
 namespace FlightBooking.Controllers
 {
     public class BookingController : Controller
     {
         private readonly AppDbContext _db;
+        private readonly IUnitOfWork _uow;
+        private readonly PaymentService _paymentService;
+        private readonly IConfiguration _config;
 
-    public BookingController(AppDbContext db)
+    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config)
         {
             _db = db;
+            _uow = uow;
+            _paymentService = paymentService;
+            _config = config;
         }
 
         [HttpGet]
@@ -207,13 +219,155 @@ namespace FlightBooking.Controllers
         }
 
         [HttpGet]
-        public IActionResult GatewayRedirect()
+        public async Task<IActionResult> GatewayRedirect()
         {
-            return Content("Booking funnel state locked down. Ready for Day 15 Razorpay Payment integration.");
+            var sessionStr = HttpContext.Session.GetString("CurrentBookingSession");
+            var ancillaryStr = HttpContext.Session.GetString("FinalAncillarySelections");
+
+            if (string.IsNullOrEmpty(sessionStr)) return RedirectToAction("Index", "Home");
+
+            var sessionData = JsonSerializer.Deserialize<BookingSessionVM>(sessionStr)!;
+            var ancillarySelections = string.IsNullOrEmpty(ancillaryStr)
+                ? new List<PassengerAddOnSelection>()
+                : JsonSerializer.Deserialize<List<PassengerAddOnSelection>>(ancillaryStr)!;
+
+            // Calculate total including add-ons
+            decimal ancillaryTotal = 0;
+            // (Mock price aggregation matching Day 14 UI matrices)
+            foreach (var selection in ancillarySelections)
+            {
+                if (selection.SelectedBaggageId == 2) ancillaryTotal += 450.00m;
+                if (selection.SelectedBaggageId == 3) ancillaryTotal += 950.00m;
+                if (selection.SelectedMealId == 2) ancillaryTotal += 250.00m;
+                if (selection.SelectedMealId == 3) ancillaryTotal += 350.00m;
+            }
+
+            decimal totalFinalAmount = sessionData.TotalAmount + ancillaryTotal;
+            string transactionReceiptId = $"REC_{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+
+            // Call external SDK to register intent order
+            string razorpayOrderId = _paymentService.CreateOrder(totalFinalAmount, transactionReceiptId);
+
+            ViewBag.RazorpayKeyId = _config["Razorpay:KeyId"];
+            ViewBag.OrderId = razorpayOrderId;
+            ViewBag.AmountPaisa = Convert.ToInt32(totalFinalAmount * 100);
+            ViewBag.FlightId = sessionData.FlightId;
+            ViewBag.TotalAmount = totalFinalAmount;
+
+            return View("GatewayCheckout");
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcessPayment([FromBody] RazorpayPaymentModel model)
+        {
+            if (model == null || string.IsNullOrEmpty(model.RazorpayPaymentId))
+            {
+                return Json(new { success = false, message = "Payment metadata transmission corrupted." });
+            }
+
+            bool isValid = _paymentService.VerifySignature(model.RazorpayOrderId, model.RazorpayPaymentId, model.RazorpaySignature);
+            if (!isValid)
+            {
+                return Json(new { success = false, message = "Cryptographic signature check failed. Security alert triggered." });
+            }
+
+            var sessionStr = HttpContext.Session.GetString("CurrentBookingSession");
+            var manifestStr = HttpContext.Session.GetString("CapturedPassengerManifest");
+
+            if (string.IsNullOrEmpty(sessionStr) || string.IsNullOrEmpty(manifestStr))
+            {
+                return Json(new { success = false, message = "Session data lost mid-transaction. Contact support." });
+            }
+
+            var sessionData = JsonSerializer.Deserialize<BookingSessionVM>(sessionStr)!;
+            var passengerInputs = JsonSerializer.Deserialize<List<PassengerInputModel>>(manifestStr)!;
+
+            // Generate Unique Alpha-Numeric PNR code string
+            string generatedPnr = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+            string activeUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+            // Begin Transaction Sequence via Unit of Work / DB Context bounds
+            using var dbTransaction = await _db.Database.BeginTransactionAsync();
+            try
+            {
+                var bookingRecord = new Booking
+                {
+                    FlightId = sessionData.FlightId,
+                    UserId = activeUserId,
+                    PNR = generatedPnr,
+                    BookingDate = DateTime.UtcNow,
+                    TotalAmount = sessionData.TotalAmount, // updates inside production mapping triggers
+                    Status = "Confirmed"
+                };
+
+                await _db.Bookings.AddAsync(bookingRecord);
+                await _db.SaveChangesAsync();
+
+                foreach (var input in passengerInputs)
+                {
+                    var passenger = new Passenger
+                    {
+                        BookingId = bookingRecord.BookingId,
+                        FullName = input.Name,
+                        Age = input.Age,
+                        Gender = input.Gender,
+                        SeatNumber = input.AssignedSeatNumber
+                    };
+                    await _db.Passengers.AddAsync(passenger);
+
+                    // Update corresponding seat records to flag them as occupied
+                    var seatEntity = await _db.Seats.FirstOrDefaultAsync(s => s.SeatId == input.AssignedSeatId);
+                    if (seatEntity != null)
+                    {
+                        seatEntity.IsAvailable = false; // Seat locked out
+                    }
+                }
+
+                var paymentRecord = new Payment
+                {
+                    BookingId = bookingRecord.BookingId,
+                    TransactionId = model.RazorpayPaymentId,
+                    Amount = sessionData.TotalAmount,
+                    PaymentMethod = "UPI",
+                    PaidAt = DateTime.UtcNow,
+                    Status = "Success"
+                };
+                await _db.Payments.AddAsync(paymentRecord);
+
+                await _db.SaveChangesAsync();
+                await dbTransaction.CommitAsync();
+
+                // Clear temporary cache collections to finalize pipeline steps safely
+                HttpContext.Session.Remove("CurrentBookingSession");
+                HttpContext.Session.Remove("CapturedPassengerManifest");
+                HttpContext.Session.Remove("FinalAncillarySelections");
+
+                return Json(new { success = true, pnr = generatedPnr, bookingId = bookingRecord.BookingId });
+            }
+            catch (Exception)
+            {
+                await dbTransaction.RollbackAsync();
+                return Json(new { success = false, message = "Internal transaction failure. Refunding transaction automatically." });
+            }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Confirmation(int id, string pnr)
+        {
+            var booking = await _db.Bookings
+                .Include(b => b.Flight).ThenInclude(f => f.Airline)
+                .Include(b => b.Flight).ThenInclude(f => f.FromAirport)
+                .Include(b => b.Flight).ThenInclude(f => f.ToAirport)
+                .Include(b => b.Passengers)
+                .FirstOrDefaultAsync(b => b.BookingId == id && b.PNR == pnr);
 
+            if (booking == null) return RedirectToAction("Index", "Home");
+
+            return View(booking);
+        }
     }
-
 }
+
+
+   
 
