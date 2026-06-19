@@ -9,6 +9,8 @@ using FlightBooking.Models.ViewModels;
 using FlightBooking.Models.Domain;
 using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FlightBooking.Controllers
 {
@@ -18,13 +20,16 @@ namespace FlightBooking.Controllers
         private readonly IUnitOfWork _uow;
         private readonly PaymentService _paymentService;
         private readonly IConfiguration _config;
+        private readonly ITicketService _ticketService;
 
-    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config)
+
+    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config,ITicketService ticketService)
         {
             _db = db;
             _uow = uow;
             _paymentService = paymentService;
             _config = config;
+            _ticketService = ticketService;
         }
 
         [HttpGet]
@@ -102,9 +107,8 @@ namespace FlightBooking.Controllers
         }
 
         [HttpPost]
-
         [ValidateAntiForgeryToken]
-        public IActionResult SavePassengers(PassengerDetailsVM model)
+        public async Task<IActionResult> SavePassengers(PassengerDetailsVM model)
         {
             // Business Rule Validation before standard checking
             if (model.Passengers == null || model.Passengers.Count != model.PassengerCount)
@@ -114,6 +118,29 @@ namespace FlightBooking.Controllers
 
             if (!ModelState.IsValid)
             {
+                var flight = await _db.Flights
+                    .Include(f => f.Airline)
+                    .Include(f => f.FromAirport)
+                    .Include(f => f.ToAirport)
+                    .FirstOrDefaultAsync(f => f.FlightId == model.FlightId);
+
+                if (flight != null)
+                {
+                    ViewBag.FlightDetails = $"{flight.Airline.AirlineName} - {flight.FlightNumber}";
+                    ViewBag.RouteDetails = $"{flight.FromAirport.City} ({flight.FromAirport.IATACode}) to {flight.ToAirport.City} ({flight.ToAirport.IATACode})";
+                }
+
+                var sessionStr = HttpContext.Session.GetString("CurrentBookingSession");
+                if (!string.IsNullOrEmpty(sessionStr))
+                {
+                    var sessionData = JsonSerializer.Deserialize<BookingSessionVM>(sessionStr);
+                    ViewBag.TotalAmount = sessionData?.TotalAmount ?? 0m;
+                }
+                else
+                {
+                    ViewBag.TotalAmount = 0m;
+                }
+
                 return View("PassengerDetails", model);
             }
 
@@ -257,7 +284,6 @@ namespace FlightBooking.Controllers
             return View("GatewayCheckout");
         }
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ProcessPayment([FromBody] RazorpayPaymentModel model)
         {
             if (model == null || string.IsNullOrEmpty(model.RazorpayPaymentId))
@@ -284,7 +310,24 @@ namespace FlightBooking.Controllers
 
             // Generate Unique Alpha-Numeric PNR code string
             string generatedPnr = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
-            string activeUserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            string activeUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(activeUserId))
+            {
+                return Json(new { success = false, message = "User session is unauthenticated. Please log in to complete your booking." });
+            }
+
+            // Find the journey class from the first seat in the booking
+            string journeyClass = "Economy";
+            if (passengerInputs.Any())
+            {
+                var firstSeatId = passengerInputs.First().AssignedSeatId;
+                var seat = await _db.Seats.FirstOrDefaultAsync(s => s.SeatId == firstSeatId);
+                if (seat != null)
+                {
+                    journeyClass = seat.SeatClass;
+                }
+            }
 
             // Begin Transaction Sequence via Unit of Work / DB Context bounds
             using var dbTransaction = await _db.Database.BeginTransactionAsync();
@@ -296,6 +339,8 @@ namespace FlightBooking.Controllers
                     UserId = activeUserId,
                     PNR = generatedPnr,
                     BookingDate = DateTime.UtcNow,
+                    JourneyClass = journeyClass,
+                    TotalPassengers = sessionData.PassengerCount,
                     TotalAmount = sessionData.TotalAmount, // updates inside production mapping triggers
                     Status = "Confirmed"
                 };
@@ -344,10 +389,10 @@ namespace FlightBooking.Controllers
 
                 return Json(new { success = true, pnr = generatedPnr, bookingId = bookingRecord.BookingId });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 await dbTransaction.RollbackAsync();
-                return Json(new { success = false, message = "Internal transaction failure. Refunding transaction automatically." });
+                return Json(new { success = false, message = $"Internal transaction failure. Error details: {ex.Message}. Inner Exception: {ex.InnerException?.Message}" });
             }
         }
 
@@ -364,6 +409,45 @@ namespace FlightBooking.Controllers
             if (booking == null) return RedirectToAction("Index", "Home");
 
             return View(booking);
+        }
+
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> DownloadTicket(string pnr)
+        {
+            if (string.IsNullOrWhiteSpace(pnr))
+            {
+                return BadRequest("Invalid or missing PNR configuration argument Token");
+            }
+
+            var booking = await _db.Bookings
+        .Include(b => b.Passengers)
+        .Include(b => b.Flight)
+            .ThenInclude(f => f.Airline)
+        .Include(b => b.Flight)
+            .ThenInclude(f => f.FromAirport)
+        .Include(b => b.Flight)
+            .ThenInclude(f => f.ToAirport)
+        .FirstOrDefaultAsync(b => b.PNR == pnr.Trim().ToUpper());
+
+            if (booking == null)
+            {
+                return NotFound("The requested flight reservation context record was not found.");
+            }
+
+            // Optional Safety Check: Ensure the logged-in user matches the booking context owner
+            var currentUserId = _db.Bookings.Where(b => b.PNR == pnr).Select(b => b.UserId).FirstOrDefault();
+            if (booking.UserId != User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            byte[] pdfBinaryPayload = await _ticketService.GenerateTicketPdfAsync(booking);
+
+            // Construct streaming file wrapper parameters targeting instant client downloads
+            string outputFileName = $"Ticket_{booking.PNR}.pdf";
+            return File(pdfBinaryPayload, "application/pdf", outputFileName);
         }
     }
 }
