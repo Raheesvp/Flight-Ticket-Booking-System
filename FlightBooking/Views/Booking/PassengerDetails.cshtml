@@ -101,7 +101,7 @@
 
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="m-0 text-white">Grand Total:</h5>
-                    <h3 class="fw-bold m-0" style="color: #ff6f3c;">INR @string.Format("{0:N2}", ViewBag.TotalAmount)</h3>
+                    <h3 class="fw-bold m-0" style="color: #ff6f3c;">INR @string.Format("{0:N2}", (ViewBag.TotalAmount as decimal?) ?? 0m)</h3>
                 </div>
             </div>
         </div>

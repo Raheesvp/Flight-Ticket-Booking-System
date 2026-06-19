@@ -50,6 +50,7 @@ builder.Services.ConfigureApplicationCookie(o =>
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<SeatService>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<ITicketService, TicketService>();
 
 
 builder.Services.AddSession();
