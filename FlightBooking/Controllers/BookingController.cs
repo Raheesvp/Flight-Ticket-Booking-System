@@ -21,15 +21,17 @@ namespace FlightBooking.Controllers
         private readonly PaymentService _paymentService;
         private readonly IConfiguration _config;
         private readonly ITicketService _ticketService;
+        private readonly IEmailService _emailService;
 
 
-    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config,ITicketService ticketService)
+    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config,ITicketService ticketService,IEmailService emailService)
         {
             _db = db;
             _uow = uow;
             _paymentService = paymentService;
             _config = config;
             _ticketService = ticketService;
+            _emailService = emailService;
         }
 
         [HttpGet]
@@ -399,14 +401,76 @@ namespace FlightBooking.Controllers
         [HttpGet]
         public async Task<IActionResult> Confirmation(int id, string pnr)
         {
+            if (string.IsNullOrWhiteSpace(pnr))
+            {
+                return BadRequest("Invalid confirmation routing arguments.");
+            }
+
             var booking = await _db.Bookings
+                .Include(b => b.Passengers)
                 .Include(b => b.Flight).ThenInclude(f => f.Airline)
                 .Include(b => b.Flight).ThenInclude(f => f.FromAirport)
                 .Include(b => b.Flight).ThenInclude(f => f.ToAirport)
-                .Include(b => b.Passengers)
-                .FirstOrDefaultAsync(b => b.BookingId == id && b.PNR == pnr);
+                .FirstOrDefaultAsync(b => b.PNR == pnr.Trim().ToUpper());
 
-            if (booking == null) return RedirectToAction("Index", "Home");
+            if (booking == null)
+            {
+                return NotFound("Targeted reservation parameters could not be located.");
+            }
+
+            // Retrieve authenticated user's email marker address via claims matrix identity
+            var userEmail = User.Identity?.Name ?? "customer@flightbooking.com";
+
+            try
+            {
+                // 1. Generate the digital e-ticket PDF binary stream payload
+                byte[] pdfBytes = await _ticketService.GenerateTicketPdfAsync(booking);
+                string attachmentName = $"E-Ticket_{booking.PNR}.pdf";
+
+                // 2. Build out localized inline-styled HTML receipt layout template
+                string mailTemplate = $@"
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;'>
+                        <div style='background-color: #1a1a2e; padding: 25px; text-align: center; color: #ffffff;'>
+                            <h2 style='margin: 0; font-size: 24px; letter-spacing: 1px;'>YOUR FLIGHT IS CONFIRMED!</h2>
+                            <p style='margin: 5px 0 0 0; color: #f05a22; font-weight: bold;'>PNR: {booking.PNR}</p>
+                        </div>
+                        <div style='padding: 30px; color: #333333; line-height: 1.6;'>
+                            <h3 style='margin-top: 0; color: #1a1a2e;'>Dear Passenger,</h3>
+                            <p>Thank you for choosing Alhind Flights. Your payment has cleared successfully, and your seating slots have been securely committed to our manifest records.</p>
+                            
+                            <hr style='border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;' />
+                            
+                            <h4 style='color: #1a1a2e; margin-bottom: 5px;'>FLIGHT DETAILS</h4>
+                            <p style='margin: 0;'><strong>Airline:</strong> {booking.Flight.Airline.AirlineName} ({booking.Flight.FlightNumber})</p>
+                            <p style='margin: 0;'><strong>Route:</strong> {booking.Flight.FromAirport.City} ({booking.Flight.FromAirport.IATACode}) &rarr; {booking.Flight.ToAirport.City} ({booking.Flight.ToAirport.IATACode})</p>
+                            <p style='margin: 0;'><strong>Departure Time:</strong> {booking.Flight.DepartureTime:dd MMM yyyy HH:mm}</p>
+                            
+                            <hr style='border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;' />
+                            
+                            <p style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #f05a22; font-size: 13px; margin: 0;'>
+                                <strong>Attachment Information:</strong> Your official digital e-ticket has been compiled and appended directly to this communication as an uncorrupted PDF attachment file. Please print or save this document for check-in procedures.
+                            </p>
+                        </div>
+                        <div style='background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #777777; border-top: 1px solid #eeeeee;'>
+                            &copy; {DateTime.UtcNow.Year} Alhind Flights Network. All rights reserved.
+                        </div>
+                    </div>";
+
+                // 3. Dispatch the message asynchronously into the background mailing network
+                await _emailService.SendEmailWithAttachmentAsync(
+                    userEmail,
+                    $"Flight Reservation Confirmation - PNR: {booking.PNR}",
+                    mailTemplate,
+                    pdfBytes,
+                    attachmentName
+                );
+            }
+            catch (Exception)
+            {
+                // ?? CRITICAL RESILIENCY: We catch the infrastructure error silently rather than crashing.
+                // This ensures the customer is still presented with their web confirmation screen even if the mail provider fails.
+                TempData["MailWarning"] = "Your booking was recorded successfully, but an issue occurred while mailing your ticket receipt wrapper. You can still download your e-ticket instantly below.";
+            }
 
             return View(booking);
         }
