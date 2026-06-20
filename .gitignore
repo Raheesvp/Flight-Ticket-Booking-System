@@ -39,6 +39,8 @@ publish/
 
 # local secrets
 appsettings.Development.json
+.env
+.env.local
 
 # Rider
 *.sln.iml
