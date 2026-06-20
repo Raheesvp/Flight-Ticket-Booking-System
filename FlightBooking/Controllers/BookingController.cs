@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace FlightBooking.Controllers
 {
-    public class BookingController : Controller
+    public partial class BookingController : Controller
     {
         private readonly AppDbContext _db;
         private readonly IUnitOfWork _uow;
@@ -512,6 +512,43 @@ namespace FlightBooking.Controllers
             // Construct streaming file wrapper parameters targeting instant client downloads
             string outputFileName = $"Ticket_{booking.PNR}.pdf";
             return File(pdfBinaryPayload, "application/pdf", outputFileName);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> MyBookings()
+        {
+            // Extract the unique authenticated User identity claim string token
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return Challenge();
+            }
+
+            // Eagerly load full transactional graphs from persistence context to feed ViewModels safely
+            var allUserBookings = await _db.Bookings
+                .Include(b => b.Passengers)
+                .Include(b => b.Flight).ThenInclude(f => f.Airline)
+                .Include(b => b.Flight).ThenInclude(f => f.FromAirport)
+                .Include(b => b.Flight).ThenInclude(f => f.ToAirport)
+                .Where(b => b.UserId == currentUserId)
+                .OrderByDescending(b => b.BookingDate)
+                .ToListAsync();
+
+            var currentTime = DateTime.UtcNow;
+
+            // Segregate records programmatically using server-side date bounds
+            var historyVm = new BookingHistoryViewModel
+            {
+                ActiveBooking = allUserBookings
+                    .Where(b => b.Flight.DepartureTime >= currentTime).ToList(),
+
+                PastBooking = allUserBookings
+                    .Where(b => b.Flight.DepartureTime < currentTime).ToList()
+            };
+
+            return View(historyVm);
         }
     }
 }
