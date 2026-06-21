@@ -464,6 +464,65 @@ namespace FlightBooking.Controllers
 
 
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Bookings(AdminBookingFilterViewModel filters)
+        {
+            // Build out base dynamic querying tree with explicit eager loading configurations
+            IQueryable<Booking> query = _db.Bookings
+                .Include(b => b.Passengers)
+                .Include(b => b.Flight).ThenInclude(f => f.Airline)
+                .Include(b => b.Flight).ThenInclude(f => f.FromAirport)
+                .Include(b => b.Flight).ThenInclude(f => f.ToAirport);
+
+            // 1. Evaluate and append optional multi-parameter filter matrices
+            if (!string.IsNullOrWhiteSpace(filters.SearchPnr))
+            {
+                query = query.Where(b => b.PNR.Contains(filters.SearchPnr.Trim().ToUpper()));
+            }
+
+            if (filters.FilterAirlineId.HasValue)
+            {
+                query = query.Where(b => b.Flight.AirlineId == filters.FilterAirlineId.Value);
+            }
+
+            if (filters.FilterDate.HasValue)
+            {
+                query = query.Where(b => b.BookingDate.Date == filters.FilterDate.Value.Date);
+            }
+
+            // 2. Compute Pagination bounds via non-blocking asynchronous count sweeps
+            int totalBookings = await query.CountAsync();
+            int skipRecords = (filters.Page - 1) * filters.PageSize;
+
+            var paginatedResults = await query
+                .OrderByDescending(b => b.BookingDate)
+                .Skip(skipRecords)
+                .Take(filters.PageSize)
+                .ToListAsync();
+
+            // 3. Populate lookup list dependencies for select dropdown components
+            var airlines = await _db.Airlines.OrderBy(a => a.AirlineName).ToListAsync();
+            var airlineOptions = airlines.Select(a => new SelectListItem
+            {
+                Value = a.AirlineId.ToString(),
+                Text = a.AirlineName,
+                Selected = filters.FilterAirlineId == a.AirlineId
+            }).ToList();
+
+            // 4. Bind compiled metadata vectors directly back onto presentation container
+            var indexVm = new AdminBookingIndexViewModel
+            {
+                Bookings = paginatedResults,
+                Filters = filters,
+                AirlinesList = airlineOptions,
+                TotalItems = totalBookings,
+                CurrentPage = filters.Page,
+                TotalPages = (int)Math.Ceiling((double)totalBookings / filters.PageSize)
+            };
+
+            return View(indexVm);
+        }
     }
 
 }

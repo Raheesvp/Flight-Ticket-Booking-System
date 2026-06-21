@@ -1,0 +1,113 @@
+﻿@* Views/Admin/Bookings.cshtml *@
+@model FlightBooking.Web.Models.ViewModels.AdminBookingIndexViewModel
+@{
+    ViewData["Title"] = "Global Booking Operations";
+}
+
+<div class="container-fluid my-4 px-4">
+    <div class="mb-4">
+        <h2 class="text-navy fw-bold"><i class="bi bi-card-list me-2"></i>Global Booking Operations Ledger</h2>
+        <p class="text-muted">Search, view metadata profiles, and audit passenger tickets across the entire airline system network.</p>
+    </div>
+
+    <div class="card border-0 shadow-sm p-3 mb-4 bg-light">
+        <form asp-action="Bookings" asp-controller="Admin" method="get" class="row g-3 align-items-end">
+            <input type="hidden" name="Page" value="1" /> @* Reset to first page on search trigger *@
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Search PNR Code</label>
+                <input type="text" name="SearchPnr" value="@Model.Filters.SearchPnr" class="form-control text-uppercase font-monospace" placeholder="e.g. C66698" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Filter Carrier Airline</label>
+                <select name="FilterAirlineId" asp-items="Model.AirlinesList" class="form-select">
+                    <option value="">-- All Active Operators --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-secondary">Transaction Date</label>
+                <input type="date" name="FilterDate" value="@Model.Filters.FilterDate?.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-navy flex-grow-1"><i class="bi bi-search me-1"></i> Apply Filters</button>
+                <a asp-action="Bookings" asp-controller="Admin" class="btn btn-outline-secondary"><i class="bi bi-arrow-counterclockwise"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive p-3">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Transaction Date</th>
+                        <th>PNR</th>
+                        <th>Flight/Carrier Info</th>
+                        <th>Route Path</th>
+                        <th>Manifest Size</th>
+                        <th>Revenue Captured</th>
+                        <th class="text-end">Operational Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Bookings.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">
+                                <i class="bi bi-folder-x display-4 text-muted"></i>
+                                <p class="mt-2 mb-0">No booking database records match the selected filter configuration criteria.</p>
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var record in Model.Bookings)
+                    {
+                        <tr>
+                            <td><small class="text-secondary">@record.BookingDate.ToString("dd MMM yyyy HH:mm")</small></td>
+                            <td><span class="badge bg-light text-navy border font-monospace fs-6">@record.PNR</span></td>
+                            <td>
+                                <strong class="text-navy d-block">@record.Flight.Airline.AirlineName</strong>
+                                <small class="text-muted font-monospace">@record.Flight.FlightNumber</small>
+                            </td>
+                            <td>
+                                <span class="fw-semibold">@record.Flight.FromAirport.IATACode &rarr; @record.Flight.ToAirport.IATACode</span>
+                                <small class="text-muted d-block">@record.Flight.FromAirport.City to @record.Flight.ToAirport.City</small>
+                            </td>
+                            <td><span class="badge bg-secondary">@record.Passengers.Count Passengers</span></td>
+                            <td><strong class="text-success">INR @record.TotalAmount.ToString("N2")</strong></td>
+                            <td class="text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm border dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <a class="dropdown-item" asp-action="DownloadTicket" asp-controller="Booking" asp-route-pnr="@record.PNR">
+                                                <i class="bi bi-file-earmark-pdf text-danger me-2"></i>Stream E-Ticket PDF
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3 border-top">
+                <span class="small text-muted">Showing page @Model.CurrentPage of @Model.TotalPages (@Model.TotalItems global items total)</span>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Bookings", "Admin", new { Page = i, SearchPnr = Model.Filters.SearchPnr, FilterAirlineId = Model.Filters.FilterAirlineId, FilterDate = Model.Filters.FilterDate?.ToString("yyyy-MM-dd") })">@i</a>
+                            </li>
+                        }
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
