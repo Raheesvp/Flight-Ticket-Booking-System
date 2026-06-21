@@ -1,9 +1,10 @@
 using FlightBooking.Data;
-using FlightBooking.Web.Data;
 using FlightBooking.Models.Domain;
+using FlightBooking.Services;
+using FlightBooking.Web.Data;
+using FlightBooking.Web.Infrastructure.Resilience;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using FlightBooking.Services;
 
 
 // Load environment variables from .env file if it exists in the root directory
@@ -80,6 +81,10 @@ builder.Services.AddScoped<SeatService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+
+builder.Services.AddHttpClient("ResilientClient")
+    .AddPolicyHandler(PollyPolicyRegistry.GetRetryPolicy())
+    .AddPolicyHandler(PollyPolicyRegistry.GetCircuitBreakerPolicy());
 
 
 builder.Services.AddSession();
