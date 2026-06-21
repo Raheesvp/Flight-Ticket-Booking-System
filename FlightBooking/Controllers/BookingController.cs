@@ -550,6 +550,95 @@ namespace FlightBooking.Controllers
 
             return View(historyVm);
         }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelBooking(string pnr)
+        {
+            if (string.IsNullOrWhiteSpace(pnr))
+            {
+                return BadRequest("Invalid or missing reservation lookup tokens.");
+            }
+
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            // Use an explicit atomic transaction block to avoid database desynchronization
+            using (var dbTransaction = await _db.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // 1. Fetch targeted booking graph including its passenger passenger structures
+                    var booking = await _db.Bookings
+                        .Include(b => b.Passengers)
+                        .Include(b => b.Flight)
+                        .FirstOrDefaultAsync(b => b.PNR == pnr.Trim().ToUpper() && b.UserId == currentUserId);
+
+                    if (booking == null)
+                    {
+                        return NotFound("The targeted flight reservation matching your identity was not located.");
+                    }
+
+                    if (booking.Status == "Cancelled")
+                    {
+                        return BadRequest("This dynamic itinerary has already been processed as cancelled.");
+                    }
+
+                    // 2. Perform Business Rules Evaluation (e.g., standard flat cancellation penalty processing)
+                    decimal penaltyFee = 1500.00m * booking.Passengers.Count; // INR 1500 per seat penalty charge
+                    decimal calculatedRefund = booking.TotalAmount - penaltyFee;
+                    if (calculatedRefund < 0) calculatedRefund = 0;
+
+                    // 3. Revert Allocation Maps (Mark seats back to available states)
+                    var flightId = booking.FlightId;
+                    var assignedSeatNumbers = booking.Passengers.Select(p => p.SeatNumber).ToList();
+
+                    var seatRecordsToRelease = await _db.Seats
+                        .Where(s => s.FlightId == flightId && assignedSeatNumbers.Contains(s.SeatNumber))
+                        .ToListAsync();
+
+                    foreach (var seat in seatRecordsToRelease)
+                    {
+                        seat.IsAvailable = true; // Flip back to available pool
+                    }
+
+                    // 4. Update Main Booking Node Status
+                    booking.Status = "Cancelled";
+                    _db.Bookings.Update(booking);
+
+                    // Commit local domain updates to SQL instance storage layer
+                    await _db.SaveChangesAsync();
+
+                    // 5. Simulate Outbound Third-Party Razorpay Webhook Call
+                    string mockRefundId = "rfnd_" + Guid.NewGuid().ToString().Substring(0, 14);
+
+                    // In production, this fires a background HttpClient task to hit an integration endpoint
+                    string webhookStatusResult = $"[SIMULATED WEBHOOK] Webhook sent to merchant gateway cluster. Dispatched refund ID {mockRefundId} tracking recovery value of INR {calculatedRefund:N2}.";
+
+                    // Complete atomic commit loop successfully
+                    await dbTransaction.CommitAsync();
+
+                    var resultVm = new CancellationResultViewModel
+                    {
+                        PNR = booking.PNR,
+                        OriginalAmount = booking.TotalAmount,
+                        CancellationPenalty = penaltyFee,
+                        RefundAmount = calculatedRefund,
+                        RefundReferenceId = mockRefundId,
+                        WebhookSimulationStatus = webhookStatusResult
+                    };
+
+                    TempData["SuccessMessage"] = $"Reservation {booking.PNR} was processed successfully.";
+                    return View("CancellationSuccess", resultVm);
+                }
+                catch (Exception ex)
+                {
+                    // Roll back changes immediately if any system error occurs
+                    await dbTransaction.RollbackAsync();
+                    return StatusCode(500, $"An unexpected infrastructure error stopped your cancellation: {ex.Message}");
+                }
+            }
+        }
     }
 }
 
