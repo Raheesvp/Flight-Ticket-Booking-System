@@ -1,0 +1,150 @@
+@* Views/Admin/Dashboard.cshtml *@
+@model FlightBooking.Models.ViewModels.AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Executive Admin Console";
+}
+
+<div class="container-fluid my-4 px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="text-navy fw-bold"><i class="bi bi-speedometer2 me-2"></i>Executive Analytics Hub</h2>
+            <p class="text-muted mb-0">Real-time platform system overview metrics, revenue vectors, and merchant market shares.</p>
+        </div>
+        <span class="badge bg-primary p-2 fs-6 shadow-sm"><i class="bi bi-arrow-clockwise me-1"></i> Live Production Feed</span>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-uppercase small tracking-wider opacity-75">Gross Revenue Gross</span>
+                        <h3 class="fw-bold mt-1 mb-0">INR @Model.TotalRevenue.ToString("N2")</h3>
+                    </div>
+                    <i class="bi bi-currency-rupee fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm bg-success text-white h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-uppercase small tracking-wider opacity-75">Global Bookings</span>
+                        <h3 class="fw-bold mt-1 mb-0">@Model.TotalBookingsCount</h3>
+                    </div>
+                    <i class="bi bi-ticket-detailed-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm bg-warning text-dark h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-uppercase small tracking-wider opacity-75">Active Flight Routes</span>
+                        <h3 class="fw-bold mt-1 mb-0">@Model.ActiveFlightsCount</h3>
+                    </div>
+                    <i class="bi bi-airplane-engines-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm bg-info text-white h-100 p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-uppercase small tracking-wider opacity-75">Manifest Manifests Size</span>
+                        <h3 class="fw-bold mt-1 mb-0">@Model.TotalRegisteredPassengers</h3>
+                    </div>
+                    <i class="bi bi-people-fill fs-1 opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100 p-4">
+                <h5 class="text-navy fw-bold border-bottom pb-2 mb-3"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Revenue Trend Forecast (Past 6 Months)</h5>
+                <div style="position: relative; height:320px; width:100%">
+                    <canvas id="revenueLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100 p-4">
+                <h5 class="text-navy fw-bold border-bottom pb-2 mb-3"><i class="bi bi-pie-chart-fill me-2 text-success"></i>Carrier Booking Market Shares</h5>
+                <div style="position: relative; height:320px; width:100%">
+                    <canvas id="airlinePieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // --- 1. Line Chart Construction Logic (Revenue Performance) ---
+            const revenueCtx = document.getElementById('revenueLineChart').getContext('2d');
+
+            // Programmatically parse serialized backend structural array lists into clean native client models
+            const revenueLabels = @Json.Serialize(Model.RevenueLabels);
+            const revenueData = @Json.Serialize(Model.RevenueDataPoints);
+
+            new Chart(revenueCtx, {
+                type: 'line',
+                data: {
+                    labels: revenueLabels,
+                    datasets: [{
+                        label: 'Gross Receipts (INR)',
+                        data: revenueData,
+                        borderColor: '#0d6efd',
+                        backgroundColor: 'rgba(13, 110, 253, 0.08)',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0d6efd'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f1f1' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // --- 2. Doughnut Pie Chart Construction Logic (Market Share Metrics) ---
+            const airlineCtx = document.getElementById('airlinePieChart').getContext('2d');
+
+            const airlineLabels = @Json.Serialize(Model.AirlineLabels);
+            const airlineData = @Json.Serialize(Model.AirlineBookingCounts);
+
+            new Chart(airlineCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: airlineLabels,
+                    datasets: [{
+                        data: airlineData,
+                        backgroundColor: ['#1a1a2e', '#f05a22', '#198754', '#0dcaf0', '#ffc107'],
+                        borderWidth: 2,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+                    }
+                }
+            });
+        });
+    </script>
+}

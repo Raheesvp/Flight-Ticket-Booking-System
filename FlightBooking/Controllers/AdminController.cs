@@ -1,24 +1,28 @@
 ﻿using FlightBooking.Data;
 using FlightBooking.Models.Domain;
 using FlightBooking.Models.ViewModels;
+using FlightBooking.Web.Data;
 using FlightBooking.Web.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 
 namespace FlightBooking.Controllers
 {
-    [Authorize(Roles="Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
         private readonly IUnitOfWork _uow;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AppDbContext _db;
 
-        public AdminController(IUnitOfWork uow, UserManager<ApplicationUser> userManager)
+        public AdminController(IUnitOfWork uow, UserManager<ApplicationUser> userManager, AppDbContext db)
         {
             _uow = uow;
             _userManager = userManager;
+            _db = db;
         }
 
         public async Task<IActionResult> Index()
@@ -51,7 +55,7 @@ namespace FlightBooking.Controllers
 
         }
 
-                public IActionResult Bookings() => View();
+        public IActionResult Bookings() => View();
         public IActionResult Users() => View();
 
         [HttpGet]
@@ -404,7 +408,62 @@ namespace FlightBooking.Controllers
             return RedirectToAction("Flights");
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Dashboard()
+        {
+            var viewModel = new AdminDashboardViewModel();
 
+            // 1. Calculate High-Level Structural KPI Card Statistics
+            viewModel.TotalRevenue = await _db.Bookings.SumAsync(b => b.TotalAmount);
+            viewModel.TotalBookingsCount = await _db.Bookings.CountAsync();
+            viewModel.ActiveFlightsCount = await _db.Flights.CountAsync(f => f.DepartureTime >= DateTime.UtcNow);
+            viewModel.TotalRegisteredPassengers = await _db.Passengers.CountAsync();
+
+            // 2. Fetch Monthly Revenue Analytics (Past 6 Months) for Line Graph
+            var baselineDate = DateTime.UtcNow.AddMonths(-5);
+            var monthlyData = await _db.Bookings
+                .Where(b => b.BookingDate >= new DateTime(baselineDate.Year, baselineDate.Month, 1))
+                .GroupBy(b => new { b.BookingDate.Year, b.BookingDate.Month })
+                .Select(g => new
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    MonthlySum = g.Sum(b => b.TotalAmount)
+                })
+                .ToListAsync();
+
+            // Sort and project chronological order onto the view model vectors
+            for (int i = 5; i >= 0; i--)
+            {
+                var targetMonth = DateTime.UtcNow.AddMonths(-i);
+                var match = monthlyData.FirstOrDefault(m => m.Year == targetMonth.Year && m.Month == targetMonth.Month);
+
+                viewModel.RevenueLabels.Add(targetMonth.ToString("MMM yyyy"));
+                viewModel.RevenueDataPoints.Add(match?.MonthlySum ?? 0);
+            }
+
+            // 3. Fetch Market Share Breakdown (Bookings per Airline) for Doughnut Chart
+            var airlineShare = await _db.Bookings
+                .Include(b => b.Flight).ThenInclude(f => f.Airline)
+                .GroupBy(b => b.Flight.Airline.AirlineName)
+                .Select(g => new
+                {
+                    AirlineName = g.Key ?? "Unknown Provider",
+                    Count = g.Count()
+                })
+                .Take(5) // Limit to top 5 running carriers
+                .ToListAsync();
+
+            foreach (var record in airlineShare)
+            {
+                viewModel.AirlineLabels.Add(record.AirlineName);
+                viewModel.AirlineBookingCounts.Add(record.Count);
+            }
+
+            return View(viewModel);
+
+
+        }
     }
-}
 
+}
