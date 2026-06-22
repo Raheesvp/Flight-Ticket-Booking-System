@@ -11,11 +11,13 @@ namespace FlightBooking.Controllers
 
         private readonly AppDbContext _dbcontext;
         private readonly SeatService _seatService;
+        private readonly ICacheService _cacheService;
 
-        public FlightController(AppDbContext dbcontext, SeatService seatService)
+        public FlightController(AppDbContext dbcontext, SeatService seatService,ICacheService cacheService)
         {
             _dbcontext = dbcontext;
             _seatService = seatService;
+            _cacheService = cacheService;
         }
 
         [HttpGet]
@@ -23,6 +25,21 @@ namespace FlightBooking.Controllers
         {
             if (!ModelState.IsValid)
                 return RedirectToAction("Index", "Home");
+
+            string cacheKey = $"flights_search_{model.FromAirportId}_{model.ToAirportId}_{model.DepartureDate:yyyyMMdd}_{model.Passengers}_{model.JourneyClass}";
+
+            var cachedFlights = await _cacheService.GetAsync<List<FlightSearchResultViewModel>>(cacheKey);
+
+            if (cachedFlights != null)
+            {
+                // Cache Hit! Return serialized view models instantly bypassing SQL engine loops entirely
+                ViewBag.IsCachedData = true;
+                ViewBag.SearchModel = model;
+                ViewBag.ResultCount = cachedFlights.Count;
+                ViewBag.FromAirportName = cachedFlights.FirstOrDefault()?.FromCity ?? "";
+                ViewBag.ToAirportName = cachedFlights.FirstOrDefault()?.ToCity ?? "";
+                return View(cachedFlights);
+            }
 
             // Validate route
             if (model.FromAirportId == model.ToAirportId)
@@ -76,6 +93,10 @@ namespace FlightBooking.Controllers
                 ?.FromAirport?.City ?? "";
             ViewBag.ToAirportName = flights.FirstOrDefault()
                 ?.ToAirport?.City ?? "";
+
+            // 3. Save to Redis memory with an absolute TTL window of 5 minutes to keep results reasonably fresh
+            await _cacheService.SetAsync(cacheKey, results, TimeSpan.FromMinutes(5));
+            ViewBag.IsCachedData = false;
 
             return View(results);
 

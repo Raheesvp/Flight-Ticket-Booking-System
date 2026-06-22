@@ -98,9 +98,15 @@ builder.Services.AddHttpClient("ResilientClient")
 
 builder.Services.AddSession();
 
+// Add in-memory cache (no Redis needed)
+builder.Services.AddMemoryCache();
+
+// Register custom cache wrapper utility
+builder.Services.AddScoped<ICacheService, CacheService>();
+
 var app = builder.Build();
 
-    app.UseMiddleware<FlightBooking.Infrastructure.Middleware.GlobalExceptionMiddleware>();
+app.UseMiddleware<FlightBooking.Infrastructure.Middleware.GlobalExceptionMiddleware>();
 
 
 using (var scope = app.Services.CreateScope())
