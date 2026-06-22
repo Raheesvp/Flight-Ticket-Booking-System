@@ -23,8 +23,11 @@ namespace FlightBooking.Controllers
         private readonly ITicketService _ticketService;
         private readonly IEmailService _emailService;
 
+        private readonly ILogger<BookingController> _logger;
 
-    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config,ITicketService ticketService,IEmailService emailService)
+
+    public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config,ITicketService ticketService,IEmailService emailService
+        , ILogger<BookingController> logger)
         {
             _db = db;
             _uow = uow;
@@ -32,6 +35,7 @@ namespace FlightBooking.Controllers
             _config = config;
             _ticketService = ticketService;
             _emailService = emailService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -421,6 +425,8 @@ namespace FlightBooking.Controllers
             // Retrieve authenticated user's email marker address via claims matrix identity
             var userEmail = User.Identity?.Name ?? "customer@flightbooking.com";
 
+            _logger.LogInformation("Processing post-payment checkout confirmation pipeline for booking reference {PNR}. Associated User ID: {UserId}. Grand Invoice Total: INR {TotalAmount:N2}",
+                booking.PNR, booking.UserId, booking.TotalAmount);
             try
             {
                 // 1. Generate the digital e-ticket PDF binary stream payload
@@ -464,10 +470,14 @@ namespace FlightBooking.Controllers
                     pdfBytes,
                     attachmentName
                 );
+
+               _logger.LogInformation("Transactional e-ticket email dispatched successfully through SendGrid cluster nodes for PNR {PNR}.", booking.PNR);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // ?? CRITICAL RESILIENCY: We catch the infrastructure error silently rather than crashing.
+          _logger.LogError(ex, "Graceful exception intercepted. Communication infrastructure drop failed mailing receipt file for PNR {PNR}.", booking.PNR);
+                   
                 // This ensures the customer is still presented with their web confirmation screen even if the mail provider fails.
                 TempData["MailWarning"] = "Your booking was recorded successfully, but an issue occurred while mailing your ticket receipt wrapper. You can still download your e-ticket instantly below.";
             }
@@ -576,8 +586,11 @@ namespace FlightBooking.Controllers
 
                     if (booking == null)
                     {
+                        _logger.LogWarning("Unauthorized cancellation attempt blocked. Targeted PNR reference {PNR} was not found bound to User ID {UserId}.", pnr, currentUserId);
                         return NotFound("The targeted flight reservation matching your identity was not located.");
                     }
+
+                    _logger.LogInformation("Atomic cancellation sequence initialization started for PNR reference {PNR} by User {UserId}.", booking.PNR, currentUserId);
 
                     if (booking.Status == "Cancelled")
                     {
@@ -618,6 +631,9 @@ namespace FlightBooking.Controllers
                     // Complete atomic commit loop successfully
                     await dbTransaction.CommitAsync();
 
+                    _logger.LogInformation("Atomic cancellation transaction committed securely across database boundaries for PNR {PNR}. Seats freed up: {SeatsCount}. Refund Gateway Reference: {RefundId}.",
+                        booking.PNR, penaltyFee, calculatedRefund, mockRefundId);
+
                     var resultVm = new CancellationResultViewModel
                     {
                         PNR = booking.PNR,
@@ -635,6 +651,7 @@ namespace FlightBooking.Controllers
                 {
                     // Roll back changes immediately if any system error occurs
                     await dbTransaction.RollbackAsync();
+                    _logger.LogCritical(ex, "ACID Operational Cancellation Failure. Execution rolled back completely for PNR reference {PNR}.", pnr);
                     return StatusCode(500, $"An unexpected infrastructure error stopped your cancellation: {ex.Message}");
                 }
             }
