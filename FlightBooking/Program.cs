@@ -5,6 +5,7 @@ using FlightBooking.Web.Data;
 using FlightBooking.Web.Infrastructure.Resilience;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 
 // Load environment variables from .env file if it exists in the root directory
@@ -37,18 +38,25 @@ if (File.Exists(dotenvPath))
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+try
+{
+    Log.Information("Initializing underlying Flight Booking system core assemblies...");
+
+    // Add services to the container.
+    builder.Services.AddControllersWithViews();
+
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration
-               .GetConnectionString("DefaultConnection")));
-
-
-
-//Asp.net core identity services
+    //Asp.net core identity services
 
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(o =>
@@ -134,3 +142,23 @@ app.MapControllerRoute(
 app.MapControllers();
 
 app.Run();
+
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex,"The application runtime host terminated unexpectedly during initial bootstrap configuration loops!");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+
+
+
+
+
+
+
+
+
+
