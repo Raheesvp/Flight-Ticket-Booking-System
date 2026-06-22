@@ -23,8 +23,13 @@ namespace FlightBooking.Web.Controllers
             );
 
             return View(airports);
+
+        
+
+          
         }
 
+        [ResponseCache(Duration =0,Location =ResponseCacheLocation.None,NoStore =true)]
         public IActionResult Error()
         {
             return View();
@@ -35,5 +40,9 @@ namespace FlightBooking.Web.Controllers
             Response.StatusCode = 404;
             return View();
         }
+
+        
+
+        
     }
 }
