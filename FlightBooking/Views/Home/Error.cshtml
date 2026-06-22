@@ -1,0 +1,32 @@
+﻿@* Views/Home/Error.cshtml *@
+@{
+    ViewData["Title"] = "System Notification";
+}
+
+<div class="container my-5 py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="p-4 border rounded shadow-sm bg-white">
+                <i class="bi bi-exclamation-triangle-fill text-warning display-1"></i>
+                <h2 class="text-navy fw-bold mt-3">An Unexpected Error Occurred</h2>
+                <p class="text-secondary mt-2">
+                    We apologize for the inconvenience. A technical anomaly occurred while processing your request parameters.
+                    Our systems development engineering unit has been notified automatically via distributed tracing diagnostics channels.
+                </p>
+
+                <div class="alert alert-light border small text-muted text-start my-4">
+                    <strong>What happened?</strong> Your financial details and bookings are secure. The current operational connection split timed out or encountered an unexpected system state configuration issue.
+                </div>
+
+                <div class="d-flex justify-content-center gap-3">
+                    <a asp-action="Index" asp-controller="Home" class="btn btn-navy px-4">
+                        <i class="bi bi-house-door me-1"></i> Return Home
+                    </a>
+                    <button onclick="window.history.back();" class="btn btn-outline-secondary px-4">
+                        <i class="bi bi-arrow-left me-1"></i> Go Back
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

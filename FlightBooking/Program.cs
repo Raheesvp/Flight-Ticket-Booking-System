@@ -1,4 +1,5 @@
 using FlightBooking.Data;
+using FlightBooking.Infrastructure.Middleware;
 using FlightBooking.Models.Domain;
 using FlightBooking.Services;
 using FlightBooking.Web.Data;
@@ -99,6 +100,8 @@ builder.Services.AddSession();
 
 var app = builder.Build();
 
+    app.UseMiddleware<FlightBooking.Infrastructure.Middleware.GlobalExceptionMiddleware>();
+
 
 using (var scope = app.Services.CreateScope())
 {
@@ -125,7 +128,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
+app.UseSerilogRequestLogging();
 app.UseRouting();
 
 // ADD THIS � redirects 404 to your NotFound view
