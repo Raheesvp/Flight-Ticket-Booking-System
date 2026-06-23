@@ -22,12 +22,13 @@ namespace FlightBooking.Controllers
         private readonly IConfiguration _config;
         private readonly ITicketService _ticketService;
         private readonly IEmailService _emailService;
-
+        private readonly ISanitizerService _sanitizerService;
         private readonly ILogger<BookingController> _logger;
 
 
+
     public BookingController(AppDbContext db, IUnitOfWork uow, PaymentService paymentService, IConfiguration config,ITicketService ticketService,IEmailService emailService
-        , ILogger<BookingController> logger)
+        , ILogger<BookingController> logger,ISanitizerService sanitizerService)
         {
             _db = db;
             _uow = uow;
@@ -36,6 +37,7 @@ namespace FlightBooking.Controllers
             _ticketService = ticketService;
             _emailService = emailService;
             _logger = logger;
+            _sanitizerService = sanitizerService;
         }
 
         [HttpGet]
@@ -148,6 +150,13 @@ namespace FlightBooking.Controllers
                 }
 
                 return View("PassengerDetails", model);
+            }
+
+            // Security Hardening Rule: Scrub and sanitize all user-supplied text properties before processing state data
+            foreach (var passenger in model.Passengers)
+            {
+                passenger.Name = _sanitizerService.SanitizeInput(passenger.Name);
+                passenger.Gender = _sanitizerService.SanitizeInput(passenger.Gender);
             }
 
             // Serialize captured form details into Session storage for the next summary steps

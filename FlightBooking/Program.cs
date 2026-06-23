@@ -5,7 +5,9 @@ using FlightBooking.Services;
 using FlightBooking.Web.Data;
 using FlightBooking.Web.Infrastructure.Resilience;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Serilog;
 
 
@@ -40,6 +42,9 @@ if (File.Exists(dotenvPath))
 var builder = WebApplication.CreateBuilder(args);
 
 
+
+
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
@@ -51,7 +56,10 @@ try
     Log.Information("Initializing underlying Flight Booking system core assemblies...");
 
     // Add services to the container.
-    builder.Services.AddControllersWithViews();
+    builder.Services.AddControllersWithViews(options =>
+    {
+        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+    });
 
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -82,8 +90,16 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.LogoutPath      = "/Account/Logout";
     o.AccessDeniedPath = "/Account/AccessDenied";
     o.SlidingExpiration = true;
-    o.ExpireTimeSpan  = TimeSpan.FromHours(8);
+    o.ExpireTimeSpan  = TimeSpan.FromMinutes(60);
+
+
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.Strict;
+
 });
+
+builder.Services.AddScoped<ISanitizerService, SanitizerService>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<SeatService>();
@@ -108,8 +124,18 @@ var app = builder.Build();
 
 app.UseMiddleware<FlightBooking.Infrastructure.Middleware.GlobalExceptionMiddleware>();
 
+    // 3. Implement Custom HTTP Security Headers Injection Middleware Block
+    app.Use(async (context, next) =>
+    {
+        context.Response.Headers.Append("X-Content-Type-Options", "nosniff"); // Stops MIME-type sniffing attacks
+        context.Response.Headers.Append("X-Frame-Options", "DENY"); // Blocks UI clickjacking vulnerabilities inside frames
+        context.Response.Headers.Append("Referrer-Policy", "no-referrer"); // Restricts data context sharing across origins
+        context.Response.Headers.Append("X-XSS-Protection", "1; mode=block"); // Forces modern browser built-in XSS filters to block threats
+        await next();
+    });
 
-using (var scope = app.Services.CreateScope())
+
+    using (var scope = app.Services.CreateScope())
 {
     var svc = scope.ServiceProvider;
 
